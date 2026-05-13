@@ -2,6 +2,12 @@ find_library(APPKIT AppKit REQUIRED)
 find_library(WEBKIT WebKit REQUIRED)
 find_library(FOUNDATION Foundation REQUIRED)
 
+set_source_files_properties(
+  EpubWindowController.mm
+  BridgeMessageHandler.mm
+  PROPERTIES COMPILE_FLAGS "-fobjc-arc"
+)
+
 add_executable(ureader MACOSX_BUNDLE
   ${PROJECT_SOURCE_DIR}/src/main.mm
   AppDelegate.mm
