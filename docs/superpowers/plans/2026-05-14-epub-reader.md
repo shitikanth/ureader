@@ -13,7 +13,7 @@
 ## File Map
 
 ```
-CMakeLists.txt
+CMakeLists.txt              — project() + add_subdirectory() only
 Info.plist
 third_party/
   miniz.h
@@ -22,14 +22,17 @@ third_party/
   doctest.h
 src/
   epub/
+    CMakeLists.txt      — epub static lib target
     EpubBook.h          — SpineItem, TocEntry, EpubMetadata, EpubBook (owns ZIP handle)
     EpubBook.cpp        — EpubBook destructor, readFile(), fullPath()
     EpubParser.h        — EpubParser::parse() declaration
     EpubParser.cpp      — parse(), all helper functions in anonymous namespace
   app/
+    CMakeLists.txt      — app static lib target
     StateStore.h        — StateStore singleton interface
     StateStore.mm       — NSJSONSerialization-based position persistence
   ui/macos/
+    CMakeLists.txt      — ureader .app bundle target
     AppDelegate.h
     AppDelegate.mm      — application:openFile:, applicationDidFinishLaunching:
     EpubWindowController.h
@@ -42,6 +45,7 @@ src/
 resources/
   shell.html            — embedded reader UI (TOC sidebar + iframe + nav)
 tests/
+  CMakeLists.txt        — epub_tests executable
   epub/
     test_epub_parser.cpp
   fixtures/
@@ -55,6 +59,10 @@ tests/
 
 **Files:**
 - Create: `CMakeLists.txt`
+- Create: `src/epub/CMakeLists.txt`
+- Create: `src/app/CMakeLists.txt`
+- Create: `src/ui/macos/CMakeLists.txt`
+- Create: `tests/CMakeLists.txt`
 - Create: `Info.plist`
 - Create: `src/main.mm`
 - Create: `src/ui/macos/AppDelegate.h`
@@ -66,7 +74,7 @@ tests/
 mkdir -p src/epub src/app src/ui/macos third_party resources tests/epub tests/fixtures
 ```
 
-- [ ] **Step 2: Write CMakeLists.txt**
+- [ ] **Step 2: Write root CMakeLists.txt**
 
 ```cmake
 cmake_minimum_required(VERSION 3.20)
@@ -77,49 +85,81 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_OBJCXX_STANDARD 17)
 set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
 
-# epub static library
+add_subdirectory(src/epub)
+add_subdirectory(src/app)
+add_subdirectory(src/ui/macos)
+add_subdirectory(tests)
+```
+
+- [ ] **Step 3: Write src/epub/CMakeLists.txt**
+
+```cmake
 add_library(epub STATIC
-  src/epub/EpubBook.cpp
-  src/epub/EpubParser.cpp
-  third_party/tinyxml2.cpp
+  EpubBook.cpp
+  EpubParser.cpp
+  ${PROJECT_SOURCE_DIR}/third_party/tinyxml2.cpp
 )
-target_include_directories(epub PUBLIC src/epub third_party)
-
-# Main app bundle
-add_executable(ureader MACOSX_BUNDLE
-  src/main.mm
-  src/app/StateStore.mm
-  src/ui/macos/AppDelegate.mm
-  src/ui/macos/EpubWindowController.mm
-  src/ui/macos/EpubSchemeHandler.mm
-  src/ui/macos/BridgeMessageHandler.mm
-  resources/shell.html
+target_include_directories(epub
+  PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}
+          ${PROJECT_SOURCE_DIR}/third_party
 )
-set_source_files_properties(resources/shell.html
-  PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-target_link_libraries(ureader epub)
-target_include_directories(ureader PRIVATE src third_party)
+```
 
+- [ ] **Step 4: Write src/app/CMakeLists.txt**
+
+```cmake
+add_library(app STATIC StateStore.mm)
+target_include_directories(app
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
+)
+find_library(FOUNDATION Foundation REQUIRED)
+target_link_libraries(app ${FOUNDATION})
+```
+
+- [ ] **Step 5: Write src/ui/macos/CMakeLists.txt**
+
+```cmake
 find_library(APPKIT AppKit REQUIRED)
 find_library(WEBKIT WebKit REQUIRED)
 find_library(FOUNDATION Foundation REQUIRED)
-target_link_libraries(ureader ${APPKIT} ${WEBKIT} ${FOUNDATION})
+
+add_executable(ureader MACOSX_BUNDLE
+  ${PROJECT_SOURCE_DIR}/src/main.mm
+  AppDelegate.mm
+  EpubWindowController.mm
+  EpubSchemeHandler.mm
+  BridgeMessageHandler.mm
+  ${PROJECT_SOURCE_DIR}/resources/shell.html
+)
+set_source_files_properties(${PROJECT_SOURCE_DIR}/resources/shell.html
+  PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+
+target_include_directories(ureader PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${PROJECT_SOURCE_DIR}/src
+  ${PROJECT_SOURCE_DIR}/third_party
+)
+target_link_libraries(ureader epub app ${APPKIT} ${WEBKIT} ${FOUNDATION})
 
 set_target_properties(ureader PROPERTIES
-  MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/Info.plist
+  MACOSX_BUNDLE_INFO_PLIST ${PROJECT_SOURCE_DIR}/Info.plist
   MACOSX_BUNDLE_BUNDLE_NAME "ureader"
   MACOSX_BUNDLE_GUI_IDENTIFIER "com.ureader.app"
 )
+```
 
-# C++ unit tests
-add_executable(epub_tests
-  tests/epub/test_epub_parser.cpp
-  third_party/tinyxml2.cpp
+- [ ] **Step 6: Write tests/CMakeLists.txt**
+
+```cmake
+add_executable(epub_tests epub/test_epub_parser.cpp)
+target_include_directories(epub_tests PRIVATE
+  ${PROJECT_SOURCE_DIR}/src/epub
+  ${PROJECT_SOURCE_DIR}/third_party
 )
-target_include_directories(epub_tests PRIVATE src/epub third_party tests)
 target_link_libraries(epub_tests epub)
 target_compile_definitions(epub_tests PRIVATE
   FIXTURES_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures")
+
 enable_testing()
 add_test(NAME epub_tests COMMAND epub_tests)
 ```
