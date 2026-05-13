@@ -51,4 +51,14 @@ TEST_CASE("EpubParser — valid epub2") {
         auto bytes = book->readFile("OEBPS/nonexistent.xhtml");
         CHECK(bytes.empty());
     }
+    SUBCASE("toc count") {
+        REQUIRE(book->toc.size() == 2);
+    }
+    SUBCASE("toc entries") {
+        CHECK(book->toc[0].title == "Chapter 1");
+        CHECK(book->toc[0].spineIndex == 0);
+        CHECK(book->toc[0].depth == 0);
+        CHECK(book->toc[1].title == "Chapter 2");
+        CHECK(book->toc[1].spineIndex == 1);
+    }
 }

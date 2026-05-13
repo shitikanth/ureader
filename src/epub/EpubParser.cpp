@@ -138,11 +138,77 @@ void parseOpf(mz_zip_archive* zip, const std::string& opfPath, EpubBook* book) {
         parseTocNcx(zip, join(opfDir, ncxHref), book->spine, book->toc);
 }
 
-// Stub TOC parsers — replaced in Task 6
-void parseTocNcx(mz_zip_archive*, const std::string&,
-                 const std::vector<SpineItem>&, std::vector<TocEntry>&) {}
-void parseNavXhtml(mz_zip_archive*, const std::string&,
-                   const std::vector<SpineItem>&, std::vector<TocEntry>&) {}
+void parseTocNcxElement(tinyxml2::XMLElement* el,
+                        const std::vector<SpineItem>& spine,
+                        std::vector<TocEntry>& toc, int depth) {
+    if (!el) return;
+    for (auto np = el->FirstChildElement("navPoint"); np;
+         np = np->NextSiblingElement("navPoint")) {
+        auto label   = np->FirstChildElement("navLabel");
+        auto content = np->FirstChildElement("content");
+        if (label && content) {
+            auto text    = label->FirstChildElement("text");
+            const char* src = content->Attribute("src");
+            if (text && text->GetText() && src) {
+                int idx = spineIndexFor(spine, src);
+                if (idx >= 0)
+                    toc.push_back({text->GetText(), idx, depth});
+            }
+        }
+        parseTocNcxElement(np, spine, toc, depth + 1);
+    }
+}
+
+void parseTocNcx(mz_zip_archive* zip, const std::string& ncxPath,
+                 const std::vector<SpineItem>& spine, std::vector<TocEntry>& toc) {
+    auto xml = readZipFile(zip, ncxPath);
+    if (xml.empty()) return;
+    tinyxml2::XMLDocument doc;
+    if (doc.Parse(xml.c_str()) != tinyxml2::XML_SUCCESS) return;
+    auto ncx = doc.RootElement();
+    if (!ncx) return;
+    auto navMap = ncx->FirstChildElement("navMap");
+    parseTocNcxElement(navMap, spine, toc, 0);
+}
+
+void parseNavOl(tinyxml2::XMLElement* ol,
+                const std::vector<SpineItem>& spine,
+                std::vector<TocEntry>& toc, int depth) {
+    if (!ol) return;
+    for (auto li = ol->FirstChildElement("li"); li;
+         li = li->NextSiblingElement("li")) {
+        if (auto a = li->FirstChildElement("a")) {
+            const char* href = a->Attribute("href");
+            const char* text = a->GetText();
+            if (href && text) {
+                int idx = spineIndexFor(spine, href);
+                if (idx >= 0)
+                    toc.push_back({text, idx, depth});
+            }
+        }
+        parseNavOl(li->FirstChildElement("ol"), spine, toc, depth + 1);
+    }
+}
+
+void parseNavXhtml(mz_zip_archive* zip, const std::string& navPath,
+                   const std::vector<SpineItem>& spine, std::vector<TocEntry>& toc) {
+    auto xml = readZipFile(zip, navPath);
+    if (xml.empty()) return;
+    tinyxml2::XMLDocument doc;
+    if (doc.Parse(xml.c_str()) != tinyxml2::XML_SUCCESS) return;
+    auto html = doc.RootElement();
+    if (!html) return;
+    auto body = html->FirstChildElement("body");
+    if (!body) return;
+    for (auto nav = body->FirstChildElement("nav"); nav;
+         nav = nav->NextSiblingElement("nav")) {
+        const char* type = nav->Attribute("epub:type");
+        if (type && std::string(type) == "toc") {
+            parseNavOl(nav->FirstChildElement("ol"), spine, toc, 0);
+            break;
+        }
+    }
+}
 
 } // anonymous namespace
 
