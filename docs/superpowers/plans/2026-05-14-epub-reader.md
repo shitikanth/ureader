@@ -4,7 +4,7 @@
 
 **Goal:** Build a macOS epub reader with a native WKWebView window, epub:// custom scheme content serving, collapsible TOC sidebar, prev/next navigation, and per-book reading position persistence.
 
-**Architecture:** Modular C++ — `epub/` (pure C++ parsing), `ui/macos/` (Objective-C++ AppKit+WebKit), `app/` (ObjC state persistence). Each file open spawns one NSWindow with one WKWebView. No in-app file picker — files arrive via argv[1] or macOS `application:openFile:` delegate.
+**Architecture:** Modular C++ — `epub/` (pure C++ parsing), `ui/macos/` (Objective-C++ AppKit+WebKit), `app/` (pure C++ state persistence). Each file open spawns one NSWindow with one WKWebView. No in-app file picker — files arrive via argv[1] or macOS `application:openFile:` delegate.
 
 **Tech Stack:** C++17, Objective-C++ (.mm), CMake 3.20+, miniz (ZIP), tinyxml2 (XML), AppKit + WebKit frameworks, doctest (C++ unit tests)
 
@@ -30,7 +30,7 @@ src/
   app/
     CMakeLists.txt      — app static lib target
     StateStore.h        — StateStore singleton interface
-    StateStore.mm       — NSJSONSerialization-based position persistence
+    StateStore.cpp      — pure C++: std::filesystem path, manual JSON read/write
   ui/macos/
     CMakeLists.txt      — ureader .app bundle target
     AppDelegate.h
@@ -44,9 +44,8 @@ src/
   main.mm
 resources/
   shell.html            — embedded reader UI (TOC sidebar + iframe + nav)
-tests/
-  CMakeLists.txt        — epub_tests executable
-  epub/
+src/epub/
+  tests/
     test_epub_parser.cpp
   fixtures/
     create_fixtures.sh
@@ -71,7 +70,7 @@ tests/
 - [ ] **Step 1: Create directory structure**
 
 ```bash
-mkdir -p src/epub src/app src/ui/macos third_party resources tests/epub tests/fixtures
+mkdir -p src/epub/tests src/epub/fixtures src/app src/ui/macos third_party resources
 ```
 
 - [ ] **Step 2: Write root CMakeLists.txt**
@@ -88,7 +87,6 @@ set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
 add_subdirectory(src/epub)
 add_subdirectory(src/app)
 add_subdirectory(src/ui/macos)
-add_subdirectory(tests)
 ```
 
 - [ ] **Step 3: Write src/epub/CMakeLists.txt**
@@ -103,17 +101,27 @@ target_include_directories(epub
   PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}
           ${PROJECT_SOURCE_DIR}/third_party
 )
+
+add_executable(epub_tests tests/test_epub_parser.cpp)
+target_include_directories(epub_tests PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${PROJECT_SOURCE_DIR}/third_party
+)
+target_link_libraries(epub_tests epub)
+target_compile_definitions(epub_tests PRIVATE
+  FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
+enable_testing()
+add_test(NAME epub_tests COMMAND epub_tests)
 ```
 
 - [ ] **Step 4: Write src/app/CMakeLists.txt**
 
 ```cmake
-add_library(app STATIC StateStore.mm)
+add_library(app STATIC StateStore.cpp)
 target_include_directories(app
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
 )
-find_library(FOUNDATION Foundation REQUIRED)
-target_link_libraries(app ${FOUNDATION})
 ```
 
 - [ ] **Step 5: Write src/ui/macos/CMakeLists.txt**
@@ -148,21 +156,7 @@ set_target_properties(ureader PROPERTIES
 )
 ```
 
-- [ ] **Step 6: Write tests/CMakeLists.txt**
-
-```cmake
-add_executable(epub_tests epub/test_epub_parser.cpp)
-target_include_directories(epub_tests PRIVATE
-  ${PROJECT_SOURCE_DIR}/src/epub
-  ${PROJECT_SOURCE_DIR}/third_party
-)
-target_link_libraries(epub_tests epub)
-target_compile_definitions(epub_tests PRIVATE
-  FIXTURES_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures")
-
-enable_testing()
-add_test(NAME epub_tests COMMAND epub_tests)
-```
+- [ ] **Step 6: Write src/ui/macos/CMakeLists.txt** _(already defined above — no separate tests/ directory needed; epub tests live in src/epub/)_
 
 - [ ] **Step 3: Write Info.plist**
 
@@ -262,12 +256,12 @@ int main(int argc, const char* argv[]) {
 # These will be filled in later tasks
 touch src/epub/EpubBook.h src/epub/EpubBook.cpp
 touch src/epub/EpubParser.h src/epub/EpubParser.cpp
-touch src/app/StateStore.h src/app/StateStore.mm
+touch src/app/StateStore.h src/app/StateStore.cpp
 touch src/ui/macos/EpubWindowController.h src/ui/macos/EpubWindowController.mm
 touch src/ui/macos/EpubSchemeHandler.h src/ui/macos/EpubSchemeHandler.mm
 touch src/ui/macos/BridgeMessageHandler.h src/ui/macos/BridgeMessageHandler.mm
 echo '<!DOCTYPE html><html><body></body></html>' > resources/shell.html
-touch tests/epub/test_epub_parser.cpp third_party/tinyxml2.cpp third_party/tinyxml2.h
+touch src/epub/tests/test_epub_parser.cpp third_party/tinyxml2.cpp third_party/tinyxml2.h
 touch third_party/miniz.h third_party/doctest.h
 ```
 
@@ -439,11 +433,11 @@ git commit -m "feat(epub): EpubBook data structures and ZIP lifecycle"
 ## Task 4: Test Fixture
 
 **Files:**
-- Create: `tests/fixtures/create_fixtures.sh`
-- Create: `tests/fixtures/minimal.epub` (generated)
-- Populate: `tests/epub/test_epub_parser.cpp` (skeleton)
+- Create: `src/epub/fixtures/create_fixtures.sh`
+- Create: `src/epub/fixtures/minimal.epub` (generated)
+- Populate: `src/epub/tests/test_epub_parser.cpp` (skeleton)
 
-- [ ] **Step 1: Write tests/fixtures/create_fixtures.sh**
+- [ ] **Step 1: Write src/epub/fixtures/create_fixtures.sh**
 
 ```bash
 #!/bin/bash
@@ -532,14 +526,14 @@ echo "Created: $DIR/minimal.epub"
 - [ ] **Step 2: Generate the fixture**
 
 ```bash
-chmod +x tests/fixtures/create_fixtures.sh
-tests/fixtures/create_fixtures.sh
-ls -lh tests/fixtures/minimal.epub
+chmod +x src/epub/fixtures/create_fixtures.sh
+src/epub/fixtures/create_fixtures.sh
+ls -lh src/epub/fixtures/minimal.epub
 ```
 
 Expected: `minimal.epub` exists, ~2-3 KB.
 
-- [ ] **Step 3: Write the test skeleton in tests/epub/test_epub_parser.cpp**
+- [ ] **Step 3: Write the test skeleton in src/epub/tests/test_epub_parser.cpp**
 
 ```cpp
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -575,11 +569,11 @@ git commit -m "test: add test fixture and epub_tests binary skeleton"
 **Files:**
 - Populate: `src/epub/EpubParser.h`
 - Populate: `src/epub/EpubParser.cpp`
-- Modify: `tests/epub/test_epub_parser.cpp`
+- Modify: `src/epub/tests/test_epub_parser.cpp`
 
 - [ ] **Step 1: Write the failing tests**
 
-Add to `tests/epub/test_epub_parser.cpp`:
+Add to `src/epub/tests/test_epub_parser.cpp`:
 
 ```cpp
 TEST_CASE("EpubParser — nonexistent file throws") {
@@ -835,7 +829,7 @@ Expected: all tests in `TEST_CASE("EpubParser — valid epub2")` pass except TOC
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/epub/EpubParser.h src/epub/EpubParser.cpp tests/epub/test_epub_parser.cpp
+git add src/epub/EpubParser.h src/epub/EpubParser.cpp src/epub/tests/test_epub_parser.cpp
 git commit -m "feat(epub): EpubParser OPF parsing — metadata, manifest, spine"
 ```
 
@@ -845,11 +839,11 @@ git commit -m "feat(epub): EpubParser OPF parsing — metadata, manifest, spine"
 
 **Files:**
 - Modify: `src/epub/EpubParser.cpp`
-- Modify: `tests/epub/test_epub_parser.cpp`
+- Modify: `src/epub/tests/test_epub_parser.cpp`
 
 - [ ] **Step 1: Write the failing TOC tests**
 
-Add to `TEST_CASE("EpubParser — valid epub2")` in `tests/epub/test_epub_parser.cpp`:
+Add to `TEST_CASE("EpubParser — valid epub2")` in `src/epub/tests/test_epub_parser.cpp`:
 
 ```cpp
     SUBCASE("toc count") {
@@ -963,7 +957,7 @@ Expected: all test cases pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/epub/EpubParser.cpp tests/epub/test_epub_parser.cpp
+git add src/epub/EpubParser.cpp src/epub/tests/test_epub_parser.cpp
 git commit -m "feat(epub): NCX and nav.xhtml TOC parsing"
 ```
 
@@ -973,99 +967,156 @@ git commit -m "feat(epub): NCX and nav.xhtml TOC parsing"
 
 **Files:**
 - Populate: `src/app/StateStore.h`
-- Populate: `src/app/StateStore.mm`
+- Populate: `src/app/StateStore.cpp`
 
-StateStore is ObjC++ (accesses Foundation APIs) and is a singleton. It reads/writes `~/Library/Application Support/ureader/state.json`.
+Pure C++17. Uses `std::filesystem` for the platform-specific data directory and `std::fstream` + manual JSON formatting for persistence. No ObjC, no external libraries.
 
 - [ ] **Step 1: Write src/app/StateStore.h**
 
-```objc
+```cpp
 #pragma once
-#import <Foundation/Foundation.h>
+#include <string>
+#include <unordered_map>
 
-@interface StateStore : NSObject
+class StateStore {
+public:
+    static StateStore& shared();
 
-+ (instancetype)shared;
+    // Returns 0 if no saved position for this uid.
+    int positionForUID(const std::string& uid) const;
 
-// Returns 0 if no saved position for this uid.
-- (NSInteger)positionForUID:(NSString*)uid;
+    // Saves spineIndex for this uid and persists to disk immediately.
+    void setPosition(int spineIndex, const std::string& uid);
 
-// Saves spineIndex for this uid and persists to disk.
-- (void)setPosition:(NSInteger)spineIndex forUID:(NSString*)uid;
+private:
+    StateStore();
+    void load();
+    void save() const;
 
-@end
+    std::string path_;
+    std::unordered_map<std::string, int> positions_;
+};
 ```
 
-- [ ] **Step 2: Write src/app/StateStore.mm**
+- [ ] **Step 2: Write src/app/StateStore.cpp**
 
-```objc
-#import "StateStore.h"
+```cpp
+#include "StateStore.h"
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <cstdlib>
 
-@implementation StateStore {
-    NSMutableDictionary<NSString*, NSNumber*>* _positions;
-    NSString* _filePath;
+namespace fs = std::filesystem;
+
+// Returns platform-appropriate data directory, creates it if needed.
+static fs::path dataDir() {
+    const char* home = std::getenv("HOME");
+    if (!home) return fs::temp_directory_path() / "ureader";
+#if defined(__APPLE__)
+    fs::path dir = fs::path(home) / "Library/Application Support/ureader";
+#elif defined(__linux__)
+    const char* xdg = std::getenv("XDG_DATA_HOME");
+    fs::path dir = xdg ? fs::path(xdg) / "ureader"
+                       : fs::path(home) / ".local/share/ureader";
+#else
+    fs::path dir = fs::path(home) / ".ureader";
+#endif
+    fs::create_directories(dir);
+    return dir;
 }
 
-+ (instancetype)shared {
-    static StateStore* instance = nil;
-    static dispatch_once_t token;
-    dispatch_once(&token, ^{ instance = [[StateStore alloc] init]; });
+StateStore& StateStore::shared() {
+    static StateStore instance;
     return instance;
 }
 
-- (instancetype)init {
-    self = [super init];
-    NSString* support = NSSearchPathForDirectoriesInDomains(
-        NSApplicationSupportDirectory, NSUserDomainMask, YES).firstObject;
-    NSString* dir = [support stringByAppendingPathComponent:@"ureader"];
-    [[NSFileManager defaultManager] createDirectoryAtPath:dir
-        withIntermediateDirectories:YES attributes:nil error:nil];
-    _filePath = [dir stringByAppendingPathComponent:@"state.json"];
-    [self load];
-    return self;
+StateStore::StateStore() {
+    path_ = (dataDir() / "state.json").string();
+    load();
 }
 
-- (void)load {
-    NSData* data = [NSData dataWithContentsOfFile:_filePath];
-    if (!data) { _positions = [NSMutableDictionary dictionary]; return; }
-    NSDictionary* root = [NSJSONSerialization JSONObjectWithData:data
-        options:0 error:nil];
-    NSDictionary* pos = root[@"positions"];
-    _positions = pos ? [pos mutableCopy] : [NSMutableDictionary dictionary];
+int StateStore::positionForUID(const std::string& uid) const {
+    auto it = positions_.find(uid);
+    return it != positions_.end() ? it->second : 0;
 }
 
-- (void)save {
-    NSDictionary* root = @{@"positions": _positions};
-    NSData* data = [NSJSONSerialization dataWithJSONObject:root
-        options:0 error:nil];
-    [data writeToFile:_filePath atomically:YES];
+void StateStore::setPosition(int spineIndex, const std::string& uid) {
+    positions_[uid] = spineIndex;
+    save();
 }
 
-- (NSInteger)positionForUID:(NSString*)uid {
-    return [_positions[uid] integerValue]; // 0 if nil
+// Write {"positions":{"uid":N,...}}
+void StateStore::save() const {
+    std::ofstream f(path_);
+    if (!f) return;
+    f << "{\"positions\":{";
+    bool first = true;
+    for (auto& [uid, idx] : positions_) {
+        if (!first) f << ",";
+        // Escape backslash and double-quote in uid (epub identifiers rarely
+        // contain these, but be safe).
+        std::string escaped;
+        for (char c : uid) {
+            if (c == '"' || c == '\\') escaped += '\\';
+            escaped += c;
+        }
+        f << '"' << escaped << "\":" << idx;
+        first = false;
+    }
+    f << "}}";
 }
 
-- (void)setPosition:(NSInteger)spineIndex forUID:(NSString*)uid {
-    _positions[uid] = @(spineIndex);
-    [self save];
-}
+// Minimal parser for the exact format save() produces.
+// Reads "key":number pairs from inside the positions object.
+void StateStore::load() {
+    std::ifstream f(path_);
+    if (!f) return;
+    std::string content((std::istreambuf_iterator<char>(f)),
+                         std::istreambuf_iterator<char>());
 
-@end
+    auto pos = content.find("\"positions\"");
+    if (pos == std::string::npos) return;
+    auto open = content.find('{', pos + 11);
+    if (open == std::string::npos) return;
+    auto close = content.find('}', open + 1);
+    if (close == std::string::npos) return;
+
+    std::string body = content.substr(open + 1, close - open - 1);
+    size_t i = 0;
+    while (i < body.size()) {
+        auto qs = body.find('"', i);
+        if (qs == std::string::npos) break;
+        auto qe = body.find('"', qs + 1);
+        if (qe == std::string::npos) break;
+        std::string key = body.substr(qs + 1, qe - qs - 1);
+
+        auto colon = body.find(':', qe + 1);
+        if (colon == std::string::npos) break;
+        size_t ns = colon + 1;
+        while (ns < body.size() && std::isspace((unsigned char)body[ns])) ns++;
+        size_t ne = ns;
+        while (ne < body.size() && std::isdigit((unsigned char)body[ne])) ne++;
+        if (ne > ns)
+            positions_[key] = std::stoi(body.substr(ns, ne - ns));
+        i = ne + 1;
+    }
+}
 ```
 
 - [ ] **Step 3: Build to verify it compiles**
 
 ```bash
-cmake --build build --target ureader 2>&1 | grep -E "StateStore|error:" | head -20
+cmake --build build --target app 2>&1
 ```
 
-Expected: StateStore.mm compiles without errors (other link errors from unimplemented files are fine).
+Expected: `libapp.a` built with no errors.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/app/StateStore.h src/app/StateStore.mm
-git commit -m "feat(app): StateStore — per-book reading position persistence"
+git add src/app/StateStore.h src/app/StateStore.cpp
+git commit -m "feat(app): StateStore — pure C++ per-book position persistence"
 ```
 
 ---
@@ -1533,8 +1584,7 @@ git commit -m "feat(ui): EpubSchemeHandler — serve epub:// requests from ZIP"
 
     // Parse epub — throws on failure; caller handles NSException / std::exception
     _book = EpubParser::parse(path.UTF8String);
-    _currentIndex = [[StateStore shared] positionForUID:
-                     [NSString stringWithUTF8String:_book->metadata.uid.c_str()]];
+    _currentIndex = StateStore::shared().positionForUID(_book->metadata.uid);
 
     // Window
     NSRect frame = NSMakeRect(0, 0, 900, 700);
@@ -1622,8 +1672,7 @@ git commit -m "feat(ui): EpubSchemeHandler — serve epub:// requests from ZIP"
 
 - (void)setSpineIndex:(NSInteger)index {
     _currentIndex = index;
-    NSString* uid = [NSString stringWithUTF8String:_book->metadata.uid.c_str()];
-    [[StateStore shared] setPosition:index forUID:uid];
+    StateStore::shared().setPosition(static_cast<int>(index), _book->metadata.uid);
     NSDictionary* data = @{
         @"spineIndex": @(index),
         @"url":        [self urlForSpineIndex:index]
@@ -1650,8 +1699,7 @@ git commit -m "feat(ui): EpubSchemeHandler — serve epub:// requests from ZIP"
 
 - (void)windowWillClose:(NSNotification*)notification {
     // Save final position (also saved on each navigation, but belt-and-suspenders)
-    NSString* uid = [NSString stringWithUTF8String:_book->metadata.uid.c_str()];
-    [[StateStore shared] setPosition:_currentIndex forUID:uid];
+    StateStore::shared().setPosition(static_cast<int>(_currentIndex), _book->metadata.uid);
 }
 
 @end
@@ -1824,7 +1872,7 @@ Expected: all epub_tests pass.
 - [ ] **Step 3: Open the test fixture via CLI**
 
 ```bash
-open build/ureader.app --args "$(pwd)/tests/fixtures/minimal.epub"
+open build/ureader.app --args "$(pwd)/src/epub/fixtures/minimal.epub"
 ```
 
 Expected: a window opens showing "Test Book", TOC sidebar lists "Chapter 1" / "Chapter 2", content area shows chapter HTML, Prev/Next buttons work.
