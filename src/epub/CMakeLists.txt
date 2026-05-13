@@ -3,9 +3,6 @@ add_library(epub STATIC
   EpubParser.cpp
   ${PROJECT_SOURCE_DIR}/third_party/tinyxml2.cpp
   ${PROJECT_SOURCE_DIR}/third_party/miniz.c
-  ${PROJECT_SOURCE_DIR}/third_party/miniz_tdef.c
-  ${PROJECT_SOURCE_DIR}/third_party/miniz_tinfl.c
-  ${PROJECT_SOURCE_DIR}/third_party/miniz_zip.c
 )
 target_include_directories(epub
   PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}
