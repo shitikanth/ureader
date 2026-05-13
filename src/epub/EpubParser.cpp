@@ -1,5 +1,5 @@
 #include "EpubParser.h"
-#include "miniz.h"
+#include "epub_internal.h"
 #include "tinyxml2.h"
 #include <map>
 #include <stdexcept>

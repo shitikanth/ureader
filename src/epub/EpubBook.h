@@ -1,5 +1,4 @@
 #pragma once
-#include "miniz.h"
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -39,9 +38,7 @@ public:
     std::string fullPath(const SpineItem& item) const;
 
 private:
-    struct ZipHandle {
-        mz_zip_archive archive;
-    };
+    struct ZipHandle;
     ZipHandle* zip = nullptr;
     friend class EpubParser;
 };
