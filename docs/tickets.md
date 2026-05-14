@@ -25,19 +25,16 @@ Window size, position, and TOC sidebar state should be remembered across session
 **FEAT-03: External link handling**
 Clicking a link to an external website should open it in the browser, not the reading pane.
 
-**FEAT-04: Book identity in Dock and Mission Control**
-When several books are open simultaneously, each window should be visually distinguishable.
-
-**FEAT-05: Theme support**
+**FEAT-04: Theme support**
 The app chrome is dark but book content typically has a white background. Reading theme should be adjustable (light, dark, sepia).
 
-**FEAT-06: Adjustable text size**
+**FEAT-05: Adjustable text size**
 Text size should be adjustable for readability and accessibility.
 
-**FEAT-07: Keyboard navigation**
+**FEAT-06: Keyboard navigation**
 Chapters should be navigable from the keyboard.
 
-**FEAT-08: Reading progress**
+**FEAT-07: Reading progress**
 The position indicator should convey overall progress through the book, not just the current chapter number.
 
 ---
