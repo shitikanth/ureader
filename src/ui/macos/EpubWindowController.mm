@@ -1,11 +1,12 @@
 #import "EpubWindowController.h"
-@interface EpubWindowController () <NSToolbarDelegate>
-@end
 #import "TocSidebarViewController.h"
 #import "EpubSchemeHandler.h"
 #import "BridgeMessageHandler.h"
 #import "app/StateStore.h"
 #include "EpubParser.h"
+
+@interface EpubWindowController () <NSToolbarDelegate>
+@end
 
 @implementation EpubWindowController {
     NSWindow*                   _window;
@@ -97,13 +98,15 @@
         viewMenuItem.submenu = viewMenu;
         [menuBar addItem:viewMenuItem];
     }
-    NSMenuItem* tocItem = [[NSMenuItem alloc]
-        initWithTitle:@"Table of Contents"
-               action:@selector(toggleTocSidebar:)
-        keyEquivalent:@"s"];
-    tocItem.keyEquivalentModifierMask = NSEventModifierFlagCommand | NSEventModifierFlagControl;
-    tocItem.target = self;
-    [viewMenuItem.submenu addItem:tocItem];
+    if (![viewMenuItem.submenu itemWithTitle:@"Table of Contents"]) {
+        NSMenuItem* tocItem = [[NSMenuItem alloc]
+            initWithTitle:@"Table of Contents"
+                   action:@selector(toggleTocSidebar:)
+            keyEquivalent:@"s"];
+        tocItem.keyEquivalentModifierMask = NSEventModifierFlagCommand | NSEventModifierFlagControl;
+        tocItem.target = self;
+        [viewMenuItem.submenu addItem:tocItem];
+    }
 
     return self;
 }

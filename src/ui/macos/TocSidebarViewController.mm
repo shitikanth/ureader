@@ -78,7 +78,7 @@ static NSString* const kCellID = @"TocCell";
 
     // Remove any old leading constraint and add one with correct indent
     for (NSLayoutConstraint* c in cell.constraints) {
-        if (c.firstAttribute == NSLayoutAttributeLeading) {
+        if (c.firstItem == cell.textField && c.firstAttribute == NSLayoutAttributeLeading) {
             [cell removeConstraint:c];
             break;
         }
