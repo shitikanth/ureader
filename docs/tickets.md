@@ -17,28 +17,28 @@ Optional follow-on: upload `ureader.app` as a build artifact on pushes to `main`
 ### Enriched Reading
 
 **FEAT-01: In-book search**
-Search across spine items for a text string. Show results list; clicking navigates to the match.
+Users cannot search for text within a book.
 
-**FEAT-02: Persist window size and TOC sidebar state**
-Restore last window frame and TOC open/closed state on re-open.
+**FEAT-02: Window and TOC state not persisted**
+Window size, position, and TOC sidebar open/closed state reset on every launch.
 
-**FEAT-03: External link handling**
-Open `http://` / `https://` links from epub content in the default browser rather than attempting to load in the iframe.
+**FEAT-03: External links open inside the reader**
+Clicking a link to an external website loads it inside the reading pane instead of the browser.
 
-**FEAT-04: Cover image in Dock / window thumbnail**
-Extract cover image from epub manifest and use as window thumbnail for better discoverability in Mission Control.
+**FEAT-04: Multiple open windows are indistinguishable in the Dock**
+When several books are open, the Dock and Mission Control show identical icons with no visual way to tell them apart.
 
-**FEAT-05: Dark/light/sepia theme**
-The shell chrome is dark but epub content renders with the book's own (typically white) CSS — visually jarring. Inject a CSS override into the iframe based on user preference and/or system appearance (dark mode).
+**FEAT-05: Content theme does not match the app chrome**
+The app chrome is dark but book content typically renders with a white background, creating a jarring contrast. There is no way to switch themes.
 
-**FEAT-06: Font size controls**
-Allow the user to increase/decrease font size via injected CSS. Accessibility baseline. Persist per-book or globally.
+**FEAT-06: Text size cannot be adjusted**
+There are no controls to make text larger or smaller.
 
-**FEAT-07: Keyboard navigation**
-Arrow keys / space / page-down to advance; backspace / page-up to go back. Expected on desktop.
+**FEAT-07: No keyboard navigation**
+Users cannot navigate between chapters using the keyboard.
 
-**FEAT-08: Reading progress as percentage**
-The current "3 / 9" indicator shows spine index. Show reading progress as a percentage of the book (approximate, based on spine position).
+**FEAT-08: Progress indicator shows chapter number, not book progress**
+The "3 / 9" indicator counts spine items. Users have no sense of how far through the book they are.
 
 ---
 
