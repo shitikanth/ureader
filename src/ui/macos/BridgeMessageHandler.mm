@@ -21,7 +21,7 @@
     } else if ([action isEqualToString:@"navigate"]) {
         [_controller navigate:body[@"direction"]];
     } else if ([action isEqualToString:@"jumpTo"]) {
-        [_controller jumpToSpineIndex:[body[@"spineIndex"] integerValue]];
+        [_controller jumpToTocEntryIndex:[body[@"tocEntryIndex"] integerValue]];
     }
 }
 
