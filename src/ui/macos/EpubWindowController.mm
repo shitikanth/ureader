@@ -44,7 +44,6 @@
     _window.title = title.length ? title : @"ureader";
     _window.delegate = self;
     _selfRef = self;
-    [_window center];
 
     // ── WebView ──────────────────────────────────────────────────────
     WKWebViewConfiguration* config = [[WKWebViewConfiguration alloc] init];
@@ -100,6 +99,9 @@
     splitVC.splitView.autosaveName = @"MainSplitView";
 
     _window.contentViewController = splitVC;
+    _window.minSize = NSMakeSize(700, 500);
+    [_window setContentSize:NSMakeSize(1100, 740)];
+    [_window center];
 
     // ── Toolbar ──────────────────────────────────────────────────────
     NSToolbar* toolbar = [[NSToolbar alloc] initWithIdentifier:@"MainToolbar"];
