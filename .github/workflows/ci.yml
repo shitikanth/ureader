@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Configure
+        run: cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run unit tests
+        run: cd build && ctest -R epub_tests -V --output-on-failure
+
+  upload-artifact:
+    runs-on: macos-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Configure
+        run: cmake -G Ninja -B build-release -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build-release
+
+      - name: Upload app bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ureader-app
+          path: build-release/src/ui/macos/ureader.app
+          retention-days: 30
