@@ -81,6 +81,18 @@ void StateStore::load() {
         if (qe == std::string::npos) break;
         std::string key = body.substr(qs + 1, qe - qs - 1);
 
+        // Unescape \" and \\ written by save()
+        std::string unescaped;
+        unescaped.reserve(key.size());
+        for (size_t k = 0; k < key.size(); k++) {
+            if (key[k] == '\\' && k + 1 < key.size()) {
+                unescaped += key[++k];
+            } else {
+                unescaped += key[k];
+            }
+        }
+        key = std::move(unescaped);
+
         auto colon = body.find(':', qe + 1);
         if (colon == std::string::npos) break;
         size_t ns = colon + 1;
