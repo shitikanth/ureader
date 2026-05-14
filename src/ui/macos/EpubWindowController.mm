@@ -34,9 +34,11 @@
                   styleMask:(NSWindowStyleMaskTitled |
                              NSWindowStyleMaskClosable |
                              NSWindowStyleMaskMiniaturizable |
-                             NSWindowStyleMaskResizable)
+                             NSWindowStyleMaskResizable |
+                             NSWindowStyleMaskFullSizeContentView)
                     backing:NSBackingStoreBuffered
                       defer:NO];
+    _window.titlebarAppearsTransparent = YES;
     NSString* title = [NSString stringWithUTF8String:_book->metadata.title.c_str()];
     _window.title = title.length ? title : @"ureader";
     _window.delegate = self;
@@ -73,6 +75,7 @@
     _tocSplitItem.minimumThickness = 160;
     _tocSplitItem.maximumThickness = 320;
     _tocSplitItem.collapsed = YES;
+    _tocSplitItem.allowsFullHeightLayout = YES;
 
     NSSplitViewItem* contentItem = [NSSplitViewItem splitViewItemWithViewController:contentVC];
 
