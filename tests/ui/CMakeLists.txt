@@ -2,8 +2,10 @@ find_package(XCTest REQUIRED)
 
 # ── Test bundle ──────────────────────────────────────────────────────────────
 xctest_add_bundle(ureader_ui_tests ureader ReaderUITests.mm)
+target_link_libraries(ureader_ui_tests PRIVATE "-framework AppKit")
 target_compile_definitions(ureader_ui_tests PRIVATE
   FIXTURE_EPUB_PATH="${CMAKE_SOURCE_DIR}/src/epub/fixtures/minimal.epub"
+  APP_BUNDLE_PATH="$<TARGET_BUNDLE_DIR:ureader>"
 )
 
 # ── Helper: generates an XCTestConfiguration so xctest runs in UI-test mode ─
