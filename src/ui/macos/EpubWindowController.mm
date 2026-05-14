@@ -109,6 +109,7 @@
     toolbar.displayMode = NSToolbarDisplayModeIconOnly;
     toolbar.centeredItemIdentifiers = [NSSet setWithObjects:
         @"PrevChapter", @"PositionLabel", @"NextChapter", nil];
+    _window.toolbarStyle = NSWindowToolbarStyleUnified;
     _window.toolbar = toolbar;
 
     // ── View menu ────────────────────────────────────────────────────
