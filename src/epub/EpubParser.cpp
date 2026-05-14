@@ -150,9 +150,18 @@ void parseTocNcxElement(tinyxml2::XMLElement* el,
             auto text    = label->FirstChildElement("text");
             const char* src = content->Attribute("src");
             if (text && text->GetText() && src) {
-                int idx = spineIndexFor(spine, src);
-                if (idx >= 0)
-                    toc.push_back({text->GetText(), idx, depth});
+                std::string srcStr(src);
+                int idx = spineIndexFor(spine, srcStr);
+                if (idx >= 0) {
+                    TocEntry entry;
+                    entry.title      = text->GetText();
+                    entry.spineIndex = idx;
+                    entry.depth      = depth;
+                    auto hash = srcStr.find('#');
+                    if (hash != std::string::npos)
+                        entry.fragment = srcStr.substr(hash + 1);
+                    toc.push_back(std::move(entry));
+                }
             }
         }
         parseTocNcxElement(np, spine, toc, depth + 1);
@@ -181,9 +190,18 @@ void parseNavOl(tinyxml2::XMLElement* ol,
             const char* href = a->Attribute("href");
             const char* text = a->GetText();
             if (href && text) {
-                int idx = spineIndexFor(spine, href);
-                if (idx >= 0)
-                    toc.push_back({text, idx, depth});
+                std::string hrefStr(href);
+                int idx = spineIndexFor(spine, hrefStr);
+                if (idx >= 0) {
+                    TocEntry entry;
+                    entry.title      = text;
+                    entry.spineIndex = idx;
+                    entry.depth      = depth;
+                    auto hash = hrefStr.find('#');
+                    if (hash != std::string::npos)
+                        entry.fragment = hrefStr.substr(hash + 1);
+                    toc.push_back(std::move(entry));
+                }
             }
         }
         parseNavOl(li->FirstChildElement("ol"), spine, toc, depth + 1);

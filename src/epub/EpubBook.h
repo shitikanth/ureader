@@ -13,6 +13,7 @@ struct TocEntry {
     std::string title;
     int spineIndex;
     int depth;              // 0 = top-level
+    std::string fragment;  // anchor id, empty if none (e.g. "section-1-1")
 };
 
 struct EpubMetadata {

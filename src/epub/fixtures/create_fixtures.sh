@@ -48,8 +48,16 @@ cat > "$TMP/OEBPS/toc.ncx" << 'EOF'
     <navPoint id="np1" playOrder="1">
       <navLabel><text>Chapter 1</text></navLabel>
       <content src="chapter1.xhtml"/>
+      <navPoint id="np1-1" playOrder="2">
+        <navLabel><text>Section 1.1</text></navLabel>
+        <content src="chapter1.xhtml#section-1-1"/>
+      </navPoint>
+      <navPoint id="np1-2" playOrder="3">
+        <navLabel><text>Section 1.2</text></navLabel>
+        <content src="chapter1.xhtml#section-1-2"/>
+      </navPoint>
     </navPoint>
-    <navPoint id="np2" playOrder="2">
+    <navPoint id="np2" playOrder="4">
       <navLabel><text>Chapter 2</text></navLabel>
       <content src="chapter2.xhtml"/>
     </navPoint>
@@ -61,7 +69,14 @@ cat > "$TMP/OEBPS/chapter1.xhtml" << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><title>Chapter 1</title></head>
-<body><h1>Chapter 1</h1><p>Hello from chapter one.</p></body>
+<body>
+  <h1 id="chapter-1">Chapter 1</h1>
+  <p>Hello from chapter one.</p>
+  <h2 id="section-1-1">Section 1.1</h2>
+  <p>Content of section 1.1.</p>
+  <h2 id="section-1-2">Section 1.2</h2>
+  <p>Content of section 1.2.</p>
+</body>
 </html>
 EOF
 

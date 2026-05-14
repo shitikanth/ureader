@@ -52,13 +52,28 @@ TEST_CASE("EpubParser — valid epub2") {
         CHECK(bytes.empty());
     }
     SUBCASE("toc count") {
-        REQUIRE(book->toc.size() == 2);
+        REQUIRE(book->toc.size() == 4);
     }
-    SUBCASE("toc entries") {
+    SUBCASE("toc chapter entries") {
         CHECK(book->toc[0].title == "Chapter 1");
         CHECK(book->toc[0].spineIndex == 0);
         CHECK(book->toc[0].depth == 0);
-        CHECK(book->toc[1].title == "Chapter 2");
-        CHECK(book->toc[1].spineIndex == 1);
+        CHECK(book->toc[3].title == "Chapter 2");
+        CHECK(book->toc[3].spineIndex == 1);
+        CHECK(book->toc[3].depth == 0);
+    }
+    SUBCASE("toc subsection entries") {
+        CHECK(book->toc[1].title == "Section 1.1");
+        CHECK(book->toc[1].spineIndex == 0);
+        CHECK(book->toc[1].depth == 1);
+        CHECK(book->toc[2].title == "Section 1.2");
+        CHECK(book->toc[2].spineIndex == 0);
+        CHECK(book->toc[2].depth == 1);
+    }
+    SUBCASE("toc fragment preserved") {
+        CHECK(book->toc[0].fragment == "");
+        CHECK(book->toc[1].fragment == "section-1-1");
+        CHECK(book->toc[2].fragment == "section-1-2");
+        CHECK(book->toc[3].fragment == "");
     }
 }
