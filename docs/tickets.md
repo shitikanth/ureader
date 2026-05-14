@@ -25,10 +25,7 @@ Restore last window frame and TOC open/closed state on re-open.
 **FEAT-03: External link handling**
 Open `http://` / `https://` links from epub content in the default browser rather than attempting to load in the iframe.
 
-**FEAT-04: Fixed-layout EPUB detection**
-Detect `rendition:layout="pre-paginated"` in the OPF and show a clear message ("This book uses a fixed layout and is not supported") rather than rendering incorrectly.
-
-**FEAT-05: Cover image in Dock / window thumbnail**
+**FEAT-04: Cover image in Dock / window thumbnail**
 Extract cover image from epub manifest and use as window thumbnail for better discoverability in Mission Control.
 
 ---
