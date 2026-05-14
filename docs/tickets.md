@@ -17,28 +17,28 @@ Optional follow-on: upload `ureader.app` as a build artifact on pushes to `main`
 ### Enriched Reading
 
 **FEAT-01: In-book search**
-Users cannot search for text within a book.
+Find text across all chapters of a book.
 
-**FEAT-02: Window and TOC state not persisted**
-Window size, position, and TOC sidebar open/closed state reset on every launch.
+**FEAT-02: Persistent window and TOC state**
+Window size, position, and TOC sidebar state should be remembered across sessions.
 
-**FEAT-03: External links open inside the reader**
-Clicking a link to an external website loads it inside the reading pane instead of the browser.
+**FEAT-03: External link handling**
+Clicking a link to an external website should open it in the browser, not the reading pane.
 
-**FEAT-04: Multiple open windows are indistinguishable in the Dock**
-When several books are open, the Dock and Mission Control show identical icons with no visual way to tell them apart.
+**FEAT-04: Book identity in Dock and Mission Control**
+When several books are open simultaneously, each window should be visually distinguishable.
 
-**FEAT-05: Content theme does not match the app chrome**
-The app chrome is dark but book content typically renders with a white background, creating a jarring contrast. There is no way to switch themes.
+**FEAT-05: Theme support**
+The app chrome is dark but book content typically has a white background. Reading theme should be adjustable (light, dark, sepia).
 
-**FEAT-06: Text size cannot be adjusted**
-There are no controls to make text larger or smaller.
+**FEAT-06: Adjustable text size**
+Text size should be adjustable for readability and accessibility.
 
-**FEAT-07: No keyboard navigation**
-Users cannot navigate between chapters using the keyboard.
+**FEAT-07: Keyboard navigation**
+Chapters should be navigable from the keyboard.
 
-**FEAT-08: Progress indicator shows chapter number, not book progress**
-The "3 / 9" indicator counts spine items. Users have no sense of how far through the book they are.
+**FEAT-08: Reading progress**
+The position indicator should convey overall progress through the book, not just the current chapter number.
 
 ---
 
