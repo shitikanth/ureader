@@ -8,11 +8,13 @@ static NSString* const kCellID = @"TocCell";
     const std::vector<TocEntry>* _toc;
     __weak EpubWindowController* _controller;
     NSTableView* _tableView;
+    BOOL _settingActive;
 }
 
 - (instancetype)initWithToc:(const std::vector<TocEntry>*)toc
                  controller:(EpubWindowController*)controller {
     self = [super initWithNibName:nil bundle:nil];
+    if (!self) return nil;
     _toc = toc;
     _controller = controller;
     return self;
@@ -52,6 +54,7 @@ static NSString* const kCellID = @"TocCell";
 - (NSView*)tableView:(NSTableView*)tv
   viewForTableColumn:(NSTableColumn*)col
                  row:(NSInteger)row {
+    if (!_toc || row < 0 || row >= (NSInteger)_toc->size()) return nil;
     NSTableCellView* cell = [tv makeViewWithIdentifier:kCellID owner:self];
     if (!cell) {
         cell = [[NSTableCellView alloc] init];
@@ -90,6 +93,7 @@ static NSString* const kCellID = @"TocCell";
 }
 
 - (void)tableViewSelectionDidChange:(NSNotification*)note {
+    if (_settingActive) return;
     NSInteger row = _tableView.selectedRow;
     if (row >= 0) [_controller jumpToTocEntryIndex:row];
 }
@@ -97,13 +101,15 @@ static NSString* const kCellID = @"TocCell";
 // MARK: - Active tracking
 
 - (void)setActiveTocIndex:(NSInteger)idx {
+    _settingActive = YES;
     if (idx < 0) {
         [_tableView deselectAll:nil];
-        return;
+    } else {
+        [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:(NSUInteger)idx]
+                byExtendingSelection:NO];
+        [_tableView scrollRowToVisible:idx];
     }
-    [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:(NSUInteger)idx]
-            byExtendingSelection:NO];
-    [_tableView scrollRowToVisible:idx];
+    _settingActive = NO;
 }
 
 @end
