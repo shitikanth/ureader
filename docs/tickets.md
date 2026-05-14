@@ -37,18 +37,3 @@ Chapters should be navigable from the keyboard.
 **FEAT-07: Reading progress**
 The position indicator should convey overall progress through the book, not just the current chapter number.
 
----
-
-## Cleanup
-
-**CLEANUP-01: Remove stale "implemented in Task 6" comment**
-`src/epub/EpubParser.cpp:58` — the forward declarations are for functions in the same file.
-
-**CLEANUP-02: Remove meaningless `(void)wc;` cast**
-`src/ui/macos/AppDelegate.mm:41` — `wc` is already used on the previous line.
-
-**CLEANUP-03: Replace `_selfRef` self-retain with AppDelegate window list**
-`EpubWindowController` retaining itself is non-obvious. Have `AppDelegate` maintain an `NSMutableArray<EpubWindowController*>` instead.
-
-**CLEANUP-04: Add `webp` and XML MIME types to EpubSchemeHandler**
-`src/ui/macos/EpubSchemeHandler.mm` — missing `webp`, `xml`, `opf`, `ncx`.
