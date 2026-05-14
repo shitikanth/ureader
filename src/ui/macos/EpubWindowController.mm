@@ -14,6 +14,7 @@
     TocSidebarViewController*   _tocSidebar;
     NSSplitViewItem*            _tocSplitItem;
     NSTextField*                _positionLabel;
+    NSTextField*                _bookTitleLabel;
     std::unique_ptr<EpubBook>   _book;
     NSInteger                   _currentSpineIndex;
     NSInteger                   _activeTocIndex;
@@ -40,6 +41,7 @@
                     backing:NSBackingStoreBuffered
                       defer:NO];
     _window.titlebarAppearsTransparent = YES;
+    _window.titleVisibility = NSWindowTitleHidden;
     NSString* title = [NSString stringWithUTF8String:_book->metadata.title.c_str()];
     _window.title = title.length ? title : @"ureader";
     _window.delegate = self;
@@ -107,8 +109,7 @@
     NSToolbar* toolbar = [[NSToolbar alloc] initWithIdentifier:@"MainToolbar"];
     toolbar.delegate = (id<NSToolbarDelegate>)self;
     toolbar.displayMode = NSToolbarDisplayModeIconOnly;
-    toolbar.centeredItemIdentifiers = [NSSet setWithObjects:
-        @"PrevChapter", @"PositionLabel", @"NextChapter", nil];
+    toolbar.centeredItemIdentifiers = [NSSet setWithObject:@"BookTitle"];
     _window.toolbarStyle = NSWindowToolbarStyleUnified;
     _window.toolbar = toolbar;
 
@@ -141,7 +142,7 @@
 // MARK: - NSToolbarDelegate
 
 - (NSArray<NSToolbarItemIdentifier>*)toolbarDefaultItemIdentifiers:(NSToolbar*)tb {
-    return @[@"ToggleToc", @"PrevChapter", @"PositionLabel", @"NextChapter"];
+    return @[@"ToggleToc", @"BookTitle", NSToolbarFlexibleSpaceItemIdentifier, @"PrevChapter", @"PositionLabel", @"NextChapter"];
 }
 
 - (NSArray<NSToolbarItemIdentifier>*)toolbarAllowedItemIdentifiers:(NSToolbar*)tb {
@@ -159,6 +160,17 @@ willBeInsertedIntoToolbar:(BOOL)flag {
                                 accessibilityDescription:@"Toggle sidebar"];
         item.target = self;
         item.action = @selector(toggleTocSidebar:);
+        return item;
+    }
+    if ([itemIdentifier isEqualToString:@"BookTitle"]) {
+        NSToolbarItem* item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+        item.label = @"";
+        _bookTitleLabel = [NSTextField labelWithString:_window.title];
+        _bookTitleLabel.font = [NSFont systemFontOfSize:13 weight:NSFontWeightSemibold];
+        _bookTitleLabel.textColor = NSColor.labelColor;
+        _bookTitleLabel.alignment = NSTextAlignmentCenter;
+        _bookTitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+        item.view = _bookTitleLabel;
         return item;
     }
     if ([itemIdentifier isEqualToString:@"PrevChapter"]) {
