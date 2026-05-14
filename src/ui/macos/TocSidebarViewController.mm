@@ -21,16 +21,24 @@ static NSString* const kCellID = @"TocCell";
 }
 
 - (void)loadView {
+    NSVisualEffectView* sidebar = [[NSVisualEffectView alloc] init];
+    sidebar.material = NSVisualEffectMaterialSidebar;
+    sidebar.blendingMode = NSVisualEffectBlendingModeWithinWindow;
+    sidebar.state = NSVisualEffectStateFollowsWindowActiveState;
+
     NSScrollView* scroll = [[NSScrollView alloc] init];
     scroll.hasVerticalScroller = YES;
     scroll.autohidesScrollers = YES;
     scroll.borderType = NSNoBorder;
+    scroll.drawsBackground = NO;
+    scroll.translatesAutoresizingMaskIntoConstraints = NO;
 
     _tableView = [[NSTableView alloc] init];
     _tableView.style = NSTableViewStyleSourceList;
     _tableView.headerView = nil;
-    _tableView.rowHeight = 24;
+    _tableView.rowHeight = 28;
     _tableView.allowsEmptySelection = YES;
+    _tableView.backgroundColor = NSColor.clearColor;
     _tableView.dataSource = self;
     _tableView.delegate = self;
 
@@ -40,7 +48,15 @@ static NSString* const kCellID = @"TocCell";
     [_tableView sizeLastColumnToFit];
 
     scroll.documentView = _tableView;
-    self.view = scroll;
+    [sidebar addSubview:scroll];
+    [NSLayoutConstraint activateConstraints:@[
+        [scroll.topAnchor constraintEqualToAnchor:sidebar.topAnchor],
+        [scroll.bottomAnchor constraintEqualToAnchor:sidebar.bottomAnchor],
+        [scroll.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor],
+        [scroll.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor],
+    ]];
+
+    self.view = sidebar;
 }
 
 // MARK: - NSTableViewDataSource
@@ -73,8 +89,14 @@ static NSString* const kCellID = @"TocCell";
         // available cleanly — we add it below every time since reuse resets it anyway.
     }
     const auto& entry = (*_toc)[row];
+    BOOL isTopLevel = (entry.depth == 0);
     cell.textField.stringValue = [NSString stringWithUTF8String:entry.title.c_str()];
-    cell.textField.font = [NSFont systemFontOfSize:13];
+    cell.textField.font = isTopLevel
+        ? [NSFont systemFontOfSize:13 weight:NSFontWeightMedium]
+        : [NSFont systemFontOfSize:12 weight:NSFontWeightRegular];
+    cell.textField.textColor = isTopLevel
+        ? NSColor.labelColor
+        : NSColor.secondaryLabelColor;
 
     // Remove any old leading constraint and add one with correct indent
     for (NSLayoutConstraint* c in cell.constraints) {
@@ -83,7 +105,7 @@ static NSString* const kCellID = @"TocCell";
             break;
         }
     }
-    CGFloat indent = 12.0 + entry.depth * 16.0;
+    CGFloat indent = 8.0 + entry.depth * 14.0;
     [NSLayoutConstraint activateConstraints:@[
         [cell.textField.leadingAnchor constraintEqualToAnchor:cell.leadingAnchor
                                                      constant:indent]
