@@ -29,7 +29,7 @@
     _currentSpineIndex = StateStore::shared().positionForUID(_book->metadata.uid);
     _activeTocIndex = [self firstTocIndexForSpineIndex:_currentSpineIndex];
 
-    NSRect frame = NSMakeRect(0, 0, 900, 700);
+    NSRect frame = NSMakeRect(0, 0, 1100, 740);
     _window = [[NSWindow alloc]
         initWithContentRect:frame
                   styleMask:(NSWindowStyleMaskTitled |
@@ -85,17 +85,19 @@
     contentVC.view = contentWrap;
 
     _tocSplitItem = [NSSplitViewItem sidebarWithViewController:_tocSidebar];
-    _tocSplitItem.minimumThickness = 160;
-    _tocSplitItem.maximumThickness = 320;
+    _tocSplitItem.minimumThickness = 200;
+    _tocSplitItem.maximumThickness = 360;
     _tocSplitItem.collapsed = YES;
     _tocSplitItem.allowsFullHeightLayout = YES;
 
     NSSplitViewItem* contentItem = [NSSplitViewItem splitViewItemWithViewController:contentVC];
+    contentItem.minimumThickness = 400;
 
     NSSplitViewController* splitVC = [[NSSplitViewController alloc] init];
     [splitVC addSplitViewItem:_tocSplitItem];
     [splitVC addSplitViewItem:contentItem];
     splitVC.splitView.vertical = YES;
+    splitVC.splitView.autosaveName = @"MainSplitView";
 
     _window.contentViewController = splitVC;
 
