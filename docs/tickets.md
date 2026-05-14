@@ -28,6 +28,18 @@ Open `http://` / `https://` links from epub content in the default browser rathe
 **FEAT-04: Cover image in Dock / window thumbnail**
 Extract cover image from epub manifest and use as window thumbnail for better discoverability in Mission Control.
 
+**FEAT-05: Dark/light/sepia theme**
+The shell chrome is dark but epub content renders with the book's own (typically white) CSS — visually jarring. Inject a CSS override into the iframe based on user preference and/or system appearance (dark mode).
+
+**FEAT-06: Font size controls**
+Allow the user to increase/decrease font size via injected CSS. Accessibility baseline. Persist per-book or globally.
+
+**FEAT-07: Keyboard navigation**
+Arrow keys / space / page-down to advance; backspace / page-up to go back. Expected on desktop.
+
+**FEAT-08: Reading progress as percentage**
+The current "3 / 9" indicator shows spine index. Show reading progress as a percentage of the book (approximate, based on spine position).
+
 ---
 
 ## Cleanup
