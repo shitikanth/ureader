@@ -5,6 +5,7 @@
 #include "EpubBook.h"
 
 @interface EpubWindowController : NSObject <NSWindowDelegate>
+@property (nonatomic, readonly) NSWindow* window;
 - (instancetype)initWithPath:(NSString*)path;
 - (void)showWindow;
 

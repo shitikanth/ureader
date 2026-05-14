@@ -13,6 +13,8 @@
     __strong EpubWindowController* _selfRef;
 }
 
+@synthesize window = _window;
+
 - (instancetype)initWithPath:(NSString*)path {
     self = [super init];
 

@@ -3,6 +3,13 @@
 
 @implementation AppDelegate {
     BOOL _receivedFile;
+    NSMutableDictionary<NSString*, EpubWindowController*>* _openControllers;
+}
+
+- (instancetype)init {
+    self = [super init];
+    _openControllers = [NSMutableDictionary dictionary];
+    return self;
 }
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication*)app {
@@ -35,10 +42,23 @@
 }
 
 - (void)openEpubAtPath:(NSString*)path {
+    NSString* key = [path stringByStandardizingPath];
+    EpubWindowController* existing = _openControllers[key];
+    if (existing) {
+        [existing showWindow];
+        return;
+    }
     @try {
         EpubWindowController* wc = [[EpubWindowController alloc] initWithPath:path];
+        _openControllers[key] = wc;
+        [[NSNotificationCenter defaultCenter]
+            addObserverForName:NSWindowWillCloseNotification
+                        object:wc.window
+                         queue:nil
+                    usingBlock:^(NSNotification*) {
+                        [self->_openControllers removeObjectForKey:key];
+                    }];
         [wc showWindow];
-        (void)wc;
     } @catch (NSException* ex) {
         NSAlert* alert = [[NSAlert alloc] init];
         alert.messageText = @"Could not open epub";
