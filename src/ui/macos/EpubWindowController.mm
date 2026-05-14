@@ -107,6 +107,8 @@
     NSToolbar* toolbar = [[NSToolbar alloc] initWithIdentifier:@"MainToolbar"];
     toolbar.delegate = (id<NSToolbarDelegate>)self;
     toolbar.displayMode = NSToolbarDisplayModeIconOnly;
+    toolbar.centeredItemIdentifiers = [NSSet setWithObjects:
+        @"PrevChapter", @"PositionLabel", @"NextChapter", nil];
     _window.toolbar = toolbar;
 
     // ── View menu ────────────────────────────────────────────────────
@@ -138,14 +140,7 @@
 // MARK: - NSToolbarDelegate
 
 - (NSArray<NSToolbarItemIdentifier>*)toolbarDefaultItemIdentifiers:(NSToolbar*)tb {
-    return @[
-        @"ToggleToc",
-        NSToolbarFlexibleSpaceItemIdentifier,
-        @"PrevChapter",
-        @"PositionLabel",
-        @"NextChapter",
-        NSToolbarFlexibleSpaceItemIdentifier,
-    ];
+    return @[@"ToggleToc", @"PrevChapter", @"PositionLabel", @"NextChapter"];
 }
 
 - (NSArray<NSToolbarItemIdentifier>*)toolbarAllowedItemIdentifiers:(NSToolbar*)tb {
