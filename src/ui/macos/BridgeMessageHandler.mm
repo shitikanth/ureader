@@ -18,8 +18,6 @@
 
     if ([action isEqualToString:@"ready"]) {
         [_controller shellReady];
-    } else if ([action isEqualToString:@"navigate"]) {
-        [_controller navigate:body[@"direction"]];
     } else if ([action isEqualToString:@"tocSelectionChanged"]) {
         [_controller setActiveTocIndex:[body[@"tocEntryIndex"] integerValue]];
     }

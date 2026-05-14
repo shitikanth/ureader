@@ -13,6 +13,7 @@
     WKWebView*                  _webView;
     TocSidebarViewController*   _tocSidebar;
     NSSplitViewItem*            _tocSplitItem;
+    NSTextField*                _positionLabel;
     std::unique_ptr<EpubBook>   _book;
     NSInteger                   _currentSpineIndex;
     NSInteger                   _activeTocIndex;
@@ -121,11 +122,18 @@
 // MARK: - NSToolbarDelegate
 
 - (NSArray<NSToolbarItemIdentifier>*)toolbarDefaultItemIdentifiers:(NSToolbar*)tb {
-    return @[@"ToggleToc"];
+    return @[
+        @"ToggleToc",
+        NSToolbarFlexibleSpaceItemIdentifier,
+        @"PrevChapter",
+        @"PositionLabel",
+        @"NextChapter",
+        NSToolbarFlexibleSpaceItemIdentifier,
+    ];
 }
 
 - (NSArray<NSToolbarItemIdentifier>*)toolbarAllowedItemIdentifiers:(NSToolbar*)tb {
-    return @[@"ToggleToc"];
+    return [self toolbarDefaultItemIdentifiers:tb];
 }
 
 - (NSToolbarItem*)toolbar:(NSToolbar*)toolbar
@@ -133,7 +141,7 @@
 willBeInsertedIntoToolbar:(BOOL)flag {
     if ([itemIdentifier isEqualToString:@"ToggleToc"]) {
         NSToolbarItem* item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
-        item.label = @"Table of Contents";
+        item.label = @"Contents";
         item.toolTip = @"Show or hide the table of contents";
         item.image = [NSImage imageWithSystemSymbolName:@"sidebar.left"
                                 accessibilityDescription:@"Toggle sidebar"];
@@ -141,11 +149,62 @@ willBeInsertedIntoToolbar:(BOOL)flag {
         item.action = @selector(toggleTocSidebar:);
         return item;
     }
+    if ([itemIdentifier isEqualToString:@"PrevChapter"]) {
+        NSToolbarItem* item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+        item.label = @"Previous";
+        item.toolTip = @"Previous chapter";
+        item.image = [NSImage imageWithSystemSymbolName:@"chevron.left"
+                                accessibilityDescription:@"Previous chapter"];
+        item.target = self;
+        item.action = @selector(prevChapter:);
+        return item;
+    }
+    if ([itemIdentifier isEqualToString:@"NextChapter"]) {
+        NSToolbarItem* item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+        item.label = @"Next";
+        item.toolTip = @"Next chapter";
+        item.image = [NSImage imageWithSystemSymbolName:@"chevron.right"
+                                accessibilityDescription:@"Next chapter"];
+        item.target = self;
+        item.action = @selector(nextChapter:);
+        return item;
+    }
+    if ([itemIdentifier isEqualToString:@"PositionLabel"]) {
+        NSToolbarItem* item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+        item.label = @"";
+        _positionLabel = [NSTextField labelWithString:@""];
+        _positionLabel.alignment = NSTextAlignmentCenter;
+        _positionLabel.textColor = NSColor.secondaryLabelColor;
+        _positionLabel.font = [NSFont monospacedDigitSystemFontOfSize:12 weight:NSFontWeightRegular];
+        _positionLabel.translatesAutoresizingMaskIntoConstraints = NO;
+        [NSLayoutConstraint activateConstraints:@[
+            [_positionLabel.widthAnchor constraintEqualToConstant:60],
+        ]];
+        item.view = _positionLabel;
+        return item;
+    }
     return nil;
 }
 
 - (void)toggleTocSidebar:(id)sender {
     [_tocSplitItem.animator setCollapsed:!_tocSplitItem.isCollapsed];
+}
+
+- (void)prevChapter:(id)sender {
+    if (_currentSpineIndex > 0) [self setSpineIndex:_currentSpineIndex - 1];
+}
+
+- (void)nextChapter:(id)sender {
+    if (_currentSpineIndex < (NSInteger)_book->spine.size() - 1)
+        [self setSpineIndex:_currentSpineIndex + 1];
+}
+
+- (BOOL)validateToolbarItem:(NSToolbarItem*)item {
+    if ([item.itemIdentifier isEqualToString:@"PrevChapter"])
+        return _currentSpineIndex > 0;
+    if ([item.itemIdentifier isEqualToString:@"NextChapter"])
+        return _currentSpineIndex < (NSInteger)_book->spine.size() - 1;
+    return YES;
 }
 
 // MARK: - Bridge callbacks
@@ -171,15 +230,7 @@ willBeInsertedIntoToolbar:(BOOL)flag {
     };
     [self callJS:@"loadBook" withData:data];
     [_tocSidebar setActiveTocIndex:_activeTocIndex];
-}
-
-- (void)navigate:(NSString*)direction {
-    NSInteger next = _currentSpineIndex;
-    if ([direction isEqualToString:@"next"])
-        next = MIN(_currentSpineIndex + 1, (NSInteger)_book->spine.size() - 1);
-    else if ([direction isEqualToString:@"prev"])
-        next = MAX(_currentSpineIndex - 1, 0);
-    if (next != _currentSpineIndex) [self setSpineIndex:next];
+    [self updateNavState];
 }
 
 - (void)jumpToTocEntryIndex:(NSInteger)entryIndex {
@@ -205,6 +256,13 @@ willBeInsertedIntoToolbar:(BOOL)flag {
 
 // MARK: - Private helpers
 
+- (void)updateNavState {
+    _positionLabel.stringValue = [NSString stringWithFormat:@"%ld / %lu",
+                                  (long)(_currentSpineIndex + 1),
+                                  (unsigned long)_book->spine.size()];
+    [_window.toolbar validateVisibleItems];
+}
+
 - (void)setSpineIndex:(NSInteger)index {
     _currentSpineIndex = index;
     _activeTocIndex    = [self firstTocIndexForSpineIndex:index];
@@ -217,6 +275,7 @@ willBeInsertedIntoToolbar:(BOOL)flag {
     };
     [self callJS:@"navigateTo" withData:data];
     [_tocSidebar setActiveTocIndex:_activeTocIndex];
+    [self updateNavState];
 }
 
 - (NSString*)urlForSpineIndex:(NSInteger)index {
