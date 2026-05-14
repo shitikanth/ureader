@@ -25,7 +25,7 @@
 - (void)applicationDidFinishLaunching:(NSNotification*)n {
     // Handle CLI: ./ureader.app/Contents/MacOS/ureader /path/to/book.epub
     NSArray<NSString*>* args = NSProcessInfo.processInfo.arguments;
-    if (args.count > 1 && !_receivedFile) {
+    if (args.count > 1 && !_receivedFile && ![args[1] hasPrefix:@"-"]) {
         _receivedFile = YES;
         [self openEpubAtPath:args[1]];
     }
