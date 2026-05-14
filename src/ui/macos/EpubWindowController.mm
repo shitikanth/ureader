@@ -69,8 +69,20 @@
                                                      controller:self];
 
     // ── Split view ───────────────────────────────────────────────────
+    // Wrap WKWebView so it can be constrained to safeAreaLayoutGuide.topAnchor —
+    // WKWebView ignores safe area insets on its own and would overlap the toolbar.
+    NSView* contentWrap = [[NSView alloc] init];
+    _webView.translatesAutoresizingMaskIntoConstraints = NO;
+    [contentWrap addSubview:_webView];
+    [NSLayoutConstraint activateConstraints:@[
+        [_webView.topAnchor constraintEqualToAnchor:contentWrap.safeAreaLayoutGuide.topAnchor],
+        [_webView.bottomAnchor constraintEqualToAnchor:contentWrap.bottomAnchor],
+        [_webView.leadingAnchor constraintEqualToAnchor:contentWrap.leadingAnchor],
+        [_webView.trailingAnchor constraintEqualToAnchor:contentWrap.trailingAnchor],
+    ]];
+
     NSViewController* contentVC = [[NSViewController alloc] initWithNibName:nil bundle:nil];
-    contentVC.view = _webView;
+    contentVC.view = contentWrap;
 
     _tocSplitItem = [NSSplitViewItem sidebarWithViewController:_tocSidebar];
     _tocSplitItem.minimumThickness = 160;
