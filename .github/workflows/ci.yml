@@ -23,28 +23,13 @@ jobs:
       - name: Run unit tests
         run: cd build && ctest -R epub_tests -V --output-on-failure
 
-  ui-tests:
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Ninja
-        run: brew install ninja
-
-      - name: Configure
-        run: cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Debug
-
-      - name: Build
-        run: cmake --build build
-
       - name: Run UI tests
         run: cd build && ctest -R XCTest -V --output-on-failure
         timeout-minutes: 5
 
   upload-artifact:
     runs-on: macos-latest
-    needs: [build-and-test, ui-tests]
+    needs: build-and-test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
