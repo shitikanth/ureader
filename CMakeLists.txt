@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_OBJCXX_STANDARD 17)
 set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
 
+enable_testing()
+
+add_subdirectory(third_party)
 add_subdirectory(src/epub)
 add_subdirectory(src/app)
 add_subdirectory(src/ui/macos)

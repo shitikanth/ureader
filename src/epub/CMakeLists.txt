@@ -1,20 +1,13 @@
 add_library(epub STATIC
   EpubBook.cpp
   EpubParser.cpp
-  ${PROJECT_SOURCE_DIR}/third_party/tinyxml2.cpp
-  ${PROJECT_SOURCE_DIR}/third_party/miniz.c
 )
-target_include_directories(epub
-  PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}
-          ${PROJECT_SOURCE_DIR}/third_party
-)
+target_include_directories(epub PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(epub PUBLIC miniz tinyxml2)
 
 add_executable(epub_tests tests/test_epub_parser.cpp)
-target_include_directories(epub_tests PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}
-  ${PROJECT_SOURCE_DIR}/third_party
-)
-target_link_libraries(epub_tests epub)
+target_include_directories(epub_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(epub_tests epub doctest)
 target_compile_definitions(epub_tests PRIVATE
   FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
