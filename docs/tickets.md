@@ -1,5 +1,19 @@
 # ureader — Ticket Backlog
 
+## Infrastructure
+
+**INFRA-01: CI/CD — GitHub Actions build and test pipeline**
+Set up a GitHub Actions workflow on every push and PR:
+- macOS runner (macos-latest)
+- Configure CMake with Ninja (`cmake -G Ninja -B build`)
+- Build all targets (`cmake --build build`)
+- Run unit tests only (`ctest -R epub_tests -V`) — UI tests require accessibility permissions and a real display, not suitable for CI
+- Fail the build on any test failure
+
+Optional follow-on: upload `ureader.app` as a build artifact on pushes to `main`.
+
+---
+
 ## Bugs
 
 ### Critical
