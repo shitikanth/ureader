@@ -11,5 +11,5 @@
 // Called by BridgeMessageHandler
 - (void)shellReady;
 - (void)navigate:(NSString*)direction;
-- (void)jumpToSpineIndex:(NSInteger)index;
+- (void)jumpToTocEntryIndex:(NSInteger)entryIndex;
 @end
