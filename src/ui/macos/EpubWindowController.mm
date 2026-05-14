@@ -40,6 +40,7 @@
                     backing:NSBackingStoreBuffered
                       defer:NO];
     _window.titlebarAppearsTransparent = YES;
+    _window.titleVisibility = NSWindowTitleHidden;
     NSString* title = [NSString stringWithUTF8String:_book->metadata.title.c_str()];
     _window.title = title.length ? title : @"ureader";
     _window.delegate = self;
