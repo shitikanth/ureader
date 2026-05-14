@@ -62,6 +62,27 @@
     XCTAssertTrue(wv.buttons[@"← Prev"].isEnabled);
 }
 
+- (void)testOpeningSameFileDoesNotCreateDuplicateWindow {
+    XCTAssertTrue([_app.windows[@"Test Book"] waitForExistenceWithTimeout:10]);
+
+    NSURL* fileURL = [NSURL fileURLWithPath:@FIXTURE_EPUB_PATH];
+    NSURL* appURL  = [NSURL fileURLWithPath:@APP_BUNDLE_PATH];
+    NSWorkspaceOpenConfiguration* config = [NSWorkspaceOpenConfiguration configuration];
+    config.activates = YES;
+
+    XCTestExpectation* sent = [self expectationWithDescription:@"open request sent"];
+    [[NSWorkspace sharedWorkspace] openURLs:@[fileURL]
+                        withApplicationAtURL:appURL
+                               configuration:config
+                           completionHandler:^(NSRunningApplication*, NSError*) {
+                               [sent fulfill];
+                           }];
+    [self waitForExpectations:@[sent] timeout:5];
+    [NSThread sleepForTimeInterval:1.0];
+
+    XCTAssertEqual(_app.windows.count, 1u);
+}
+
 - (void)testPositionPersistsAfterRelaunch {
     XCUIElement *wv = [self waitForWebView];
     XCTAssertTrue([wv.staticTexts[@"1 / 2"] waitForExistenceWithTimeout:10]);
