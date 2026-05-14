@@ -13,4 +13,5 @@
 - (void)shellReady;
 - (void)navigate:(NSString*)direction;
 - (void)jumpToTocEntryIndex:(NSInteger)entryIndex;
+- (void)setActiveTocIndex:(NSInteger)idx;
 @end

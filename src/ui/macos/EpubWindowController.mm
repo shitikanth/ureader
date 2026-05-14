@@ -1,15 +1,20 @@
 #import "EpubWindowController.h"
+@interface EpubWindowController () <NSToolbarDelegate>
+@end
+#import "TocSidebarViewController.h"
 #import "EpubSchemeHandler.h"
 #import "BridgeMessageHandler.h"
 #import "app/StateStore.h"
 #include "EpubParser.h"
 
 @implementation EpubWindowController {
-    NSWindow*   _window;
-    WKWebView*  _webView;
-    std::unique_ptr<EpubBook> _book;
-    NSInteger   _currentSpineIndex;
-    NSInteger   _activeTocIndex;
+    NSWindow*                   _window;
+    WKWebView*                  _webView;
+    TocSidebarViewController*   _tocSidebar;
+    NSSplitViewItem*            _tocSplitItem;
+    std::unique_ptr<EpubBook>   _book;
+    NSInteger                   _currentSpineIndex;
+    NSInteger                   _activeTocIndex;
     __strong EpubWindowController* _selfRef;
 }
 
@@ -37,16 +42,14 @@
     _selfRef = self;
     [_window center];
 
+    // ── WebView ──────────────────────────────────────────────────────
     WKWebViewConfiguration* config = [[WKWebViewConfiguration alloc] init];
     EpubSchemeHandler* handler = [[EpubSchemeHandler alloc] initWithBook:_book.get()];
     [config setURLSchemeHandler:handler forURLScheme:@"epub"];
     BridgeMessageHandler* bridge = [[BridgeMessageHandler alloc] initWithController:self];
     [config.userContentController addScriptMessageHandler:bridge name:@"bridge"];
 
-    _webView = [[WKWebView alloc] initWithFrame:_window.contentView.bounds
-                                  configuration:config];
-    _webView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-    [_window.contentView addSubview:_webView];
+    _webView = [[WKWebView alloc] initWithFrame:NSZeroRect configuration:config];
 
     NSString* shellPath = [[NSBundle mainBundle] pathForResource:@"shell" ofType:@"html"];
     if (!shellPath) { NSLog(@"ureader: shell.html not found in bundle"); return nil; }
@@ -55,8 +58,35 @@
                                                encoding:NSUTF8StringEncoding
                                                   error:&err];
     if (!html) { NSLog(@"ureader: failed to read shell.html: %@", err); return nil; }
-    // epub://book origin — same as chapter content so shell can access iframe.contentDocument
     [_webView loadHTMLString:html baseURL:[NSURL URLWithString:@"epub://book/shell"]];
+
+    // ── TOC sidebar ──────────────────────────────────────────────────
+    _tocSidebar = [[TocSidebarViewController alloc] initWithToc:&_book->toc
+                                                     controller:self];
+
+    // ── Split view ───────────────────────────────────────────────────
+    NSViewController* contentVC = [[NSViewController alloc] initWithNibName:nil bundle:nil];
+    contentVC.view = _webView;
+
+    _tocSplitItem = [NSSplitViewItem sidebarWithViewController:_tocSidebar];
+    _tocSplitItem.minimumThickness = 160;
+    _tocSplitItem.maximumThickness = 320;
+    _tocSplitItem.collapsed = YES;
+
+    NSSplitViewItem* contentItem = [NSSplitViewItem splitViewItemWithViewController:contentVC];
+
+    NSSplitViewController* splitVC = [[NSSplitViewController alloc] init];
+    [splitVC addSplitViewItem:_tocSplitItem];
+    [splitVC addSplitViewItem:contentItem];
+    splitVC.splitView.vertical = YES;
+
+    _window.contentViewController = splitVC;
+
+    // ── Toolbar ──────────────────────────────────────────────────────
+    NSToolbar* toolbar = [[NSToolbar alloc] initWithIdentifier:@"MainToolbar"];
+    toolbar.delegate = (id<NSToolbarDelegate>)self;
+    toolbar.displayMode = NSToolbarDisplayModeIconOnly;
+    _window.toolbar = toolbar;
 
     return self;
 }
@@ -65,7 +95,37 @@
     [_window makeKeyAndOrderFront:nil];
 }
 
-// ── Bridge callbacks ──────────────────────────────────────────────
+// MARK: - NSToolbarDelegate
+
+- (NSArray<NSToolbarItemIdentifier>*)toolbarDefaultItemIdentifiers:(NSToolbar*)tb {
+    return @[@"ToggleToc"];
+}
+
+- (NSArray<NSToolbarItemIdentifier>*)toolbarAllowedItemIdentifiers:(NSToolbar*)tb {
+    return @[@"ToggleToc"];
+}
+
+- (NSToolbarItem*)toolbar:(NSToolbar*)toolbar
+    itemForItemIdentifier:(NSToolbarItemIdentifier)itemIdentifier
+willBeInsertedIntoToolbar:(BOOL)flag {
+    if ([itemIdentifier isEqualToString:@"ToggleToc"]) {
+        NSToolbarItem* item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+        item.label = @"Table of Contents";
+        item.toolTip = @"Show or hide the table of contents";
+        item.image = [NSImage imageWithSystemSymbolName:@"sidebar.left"
+                                accessibilityDescription:@"Toggle sidebar"];
+        item.target = self;
+        item.action = @selector(toggleTocSidebar:);
+        return item;
+    }
+    return nil;
+}
+
+- (void)toggleTocSidebar:(id)sender {
+    [_tocSplitItem.animator setCollapsed:!_tocSplitItem.isCollapsed];
+}
+
+// MARK: - Bridge callbacks
 
 - (void)shellReady {
     NSMutableArray* tocArray = [NSMutableArray array];
@@ -87,6 +147,7 @@
         @"tocAnchors":     [self tocAnchorsForSpineIndex:_currentSpineIndex]
     };
     [self callJS:@"loadBook" withData:data];
+    [_tocSidebar setActiveTocIndex:_activeTocIndex];
 }
 
 - (void)navigate:(NSString*)direction {
@@ -111,9 +172,15 @@
         @"tocAnchors":     [self tocAnchorsForSpineIndex:_currentSpineIndex]
     };
     [self callJS:@"navigateTo" withData:data];
+    [_tocSidebar setActiveTocIndex:entryIndex];
 }
 
-// ── Private helpers ───────────────────────────────────────────────
+- (void)setActiveTocIndex:(NSInteger)idx {
+    _activeTocIndex = idx;
+    [_tocSidebar setActiveTocIndex:idx];
+}
+
+// MARK: - Private helpers
 
 - (void)setSpineIndex:(NSInteger)index {
     _currentSpineIndex = index;
@@ -126,6 +193,7 @@
         @"tocAnchors":     [self tocAnchorsForSpineIndex:index]
     };
     [self callJS:@"navigateTo" withData:data];
+    [_tocSidebar setActiveTocIndex:_activeTocIndex];
 }
 
 - (NSString*)urlForSpineIndex:(NSInteger)index {
