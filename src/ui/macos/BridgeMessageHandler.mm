@@ -20,8 +20,8 @@
         [_controller shellReady];
     } else if ([action isEqualToString:@"navigate"]) {
         [_controller navigate:body[@"direction"]];
-    } else if ([action isEqualToString:@"jumpTo"]) {
-        [_controller jumpToTocEntryIndex:[body[@"tocEntryIndex"] integerValue]];
+    } else if ([action isEqualToString:@"tocSelectionChanged"]) {
+        [_controller setActiveTocIndex:[body[@"tocEntryIndex"] integerValue]];
     }
 }
 
