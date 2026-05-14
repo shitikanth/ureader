@@ -40,6 +40,9 @@ jobs:
       - name: Build
         run: cmake --build build-release
 
+      - name: Ad-hoc sign app bundle
+        run: codesign --force --deep --sign - build-release/src/ui/macos/ureader.app
+
       - name: Upload app bundle
         uses: actions/upload-artifact@v4
         with:
