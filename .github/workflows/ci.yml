@@ -2,6 +2,8 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 jobs:
@@ -22,6 +24,10 @@ jobs:
 
       - name: Run unit tests
         run: cd build && ctest -R epub_tests -V --output-on-failure
+
+      - name: Run UI tests
+        run: cd build && ctest -R XCTest -V --output-on-failure
+        timeout-minutes: 5
 
   upload-artifact:
     runs-on: macos-latest
