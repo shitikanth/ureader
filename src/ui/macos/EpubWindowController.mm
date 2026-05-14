@@ -88,6 +88,23 @@
     toolbar.displayMode = NSToolbarDisplayModeIconOnly;
     _window.toolbar = toolbar;
 
+    // ── View menu ────────────────────────────────────────────────────
+    NSMenu* menuBar = [NSApp mainMenu];
+    NSMenuItem* viewMenuItem = [menuBar itemWithTitle:@"View"];
+    if (!viewMenuItem) {
+        viewMenuItem = [[NSMenuItem alloc] initWithTitle:@"View" action:nil keyEquivalent:@""];
+        NSMenu* viewMenu = [[NSMenu alloc] initWithTitle:@"View"];
+        viewMenuItem.submenu = viewMenu;
+        [menuBar addItem:viewMenuItem];
+    }
+    NSMenuItem* tocItem = [[NSMenuItem alloc]
+        initWithTitle:@"Table of Contents"
+               action:@selector(toggleTocSidebar:)
+        keyEquivalent:@"s"];
+    tocItem.keyEquivalentModifierMask = NSEventModifierFlagCommand | NSEventModifierFlagControl;
+    tocItem.target = self;
+    [viewMenuItem.submenu addItem:tocItem];
+
     return self;
 }
 
