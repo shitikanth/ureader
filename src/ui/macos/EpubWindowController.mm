@@ -84,8 +84,8 @@
     contentVC.view = contentWrap;
 
     _tocSplitItem = [NSSplitViewItem sidebarWithViewController:_tocSidebar];
-    _tocSplitItem.minimumThickness = 200;
-    _tocSplitItem.maximumThickness = 360;
+    _tocSplitItem.minimumThickness = 260;
+    _tocSplitItem.maximumThickness = 420;
     _tocSplitItem.collapsed = YES;
     _tocSplitItem.allowsFullHeightLayout = YES;
 
