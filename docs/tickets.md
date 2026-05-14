@@ -84,50 +84,23 @@ _Ref: code-review #14_
 
 ## Features
 
-### Phase 3 — Reading Comfort Sprint
+### Enriched Reading
 
-**FEAT-01: Dark/light/sepia theme with content CSS injection**
-The shell chrome is dark but epub content renders with its own (typically white) CSS. Inject a CSS override into the iframe based on user preference and/or system appearance.
-
-**FEAT-02: Font size controls**
-Allow user to increase/decrease font size via injected CSS. Persist per-book or globally.
-
-**FEAT-03: Keyboard navigation**
-Arrow keys / space / page-down to advance, backspace / page-up to go back. Standard desktop reading expectation.
-
----
-
-### Phase 3 — Discovery Sprint
-
-**FEAT-04: Recent files list**
-Show recently opened books when no file is open (instead of exiting). Persist across sessions via NSUserDefaults or a small JSON list alongside state.json.
-
-**FEAT-05: Re-open file from within window**
-Allow opening a different book from an existing window (e.g. File menu > Open, or drag-and-drop onto the window).
-
-**FEAT-06: Window title includes author name**
-Show `Title — Author` in the window title bar and Dock tooltip. Helps distinguish multiple open windows.
-
----
-
-### Phase 4 — Enriched Reading
-
-**FEAT-07: Bookmarks**
-Mark and name specific positions within a book. Persist alongside reading position in state.json.
-
-**FEAT-08: In-book search**
+**FEAT-01: In-book search**
 Search across spine items for a text string. Show results list; clicking navigates to the match.
 
-**FEAT-09: Persist window size and TOC sidebar state**
+Search across spine items for a text string. Show results list; clicking navigates to the match.
+
+**FEAT-02: Persist window size and TOC sidebar state**
 Restore last window frame and TOC open/closed state on re-open.
 
-**FEAT-10: External link handling**
+**FEAT-03: External link handling**
 Open `http://` / `https://` links from epub content in the default browser rather than attempting to load in the iframe.
 
-**FEAT-11: Fixed-layout EPUB detection**
+**FEAT-04: Fixed-layout EPUB detection**
 Detect `rendition:layout="pre-paginated"` in the OPF and show a clear message ("This book uses a fixed layout and is not supported") rather than rendering incorrectly.
 
-**FEAT-12: Cover image in Dock / window thumbnail**
+**FEAT-05: Cover image in Dock / window thumbnail**
 Extract cover image from epub manifest and use as window thumbnail for better discoverability in Mission Control.
 
 ---
