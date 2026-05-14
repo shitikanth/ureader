@@ -38,14 +38,6 @@ jobs:
       - name: Build
         run: cmake --build build
 
-      - name: Grant accessibility permissions to xctest
-        run: |
-          XCTEST="$(xcode-select -p)/Platforms/MacOSX.platform/Developer/usr/bin/xctest"
-          sudo sqlite3 /Library/Application\ Support/com.apple.TCC/TCC.db \
-            "INSERT OR REPLACE INTO access(service,client,client_type,auth_value,auth_reason,auth_version) \
-             VALUES('kTCCServiceAccessibility','${XCTEST}',1,2,4,1);"
-          sudo killall -HUP tccd || true
-
       - name: Run UI tests
         run: cd build && ctest -R XCTest -V --output-on-failure
         timeout-minutes: 5
