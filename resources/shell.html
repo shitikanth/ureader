@@ -29,73 +29,11 @@ body {
   border-bottom: 1px solid #222;
   flex-shrink: 0;
 }
-#toc-toggle {
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 15px;
-  cursor: pointer;
-  padding: 4px 6px;
-  line-height: 1;
-}
-#toc-toggle:hover { color: #ccc; }
 #position {
   flex: 1;
   text-align: center;
   color: #555;
   font-size: 12px;
-}
-
-#main {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-#toc-sidebar {
-  width: 220px;
-  min-width: 220px;
-  background: #1a1a1a;
-  border-right: 1px solid #222;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: width 0.15s ease, min-width 0.15s ease;
-}
-#toc-sidebar.collapsed {
-  width: 0;
-  min-width: 0;
-  border-right: none;
-}
-#toc-header {
-  padding: 10px 14px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #555;
-  border-bottom: 1px solid #222;
-  flex-shrink: 0;
-}
-#toc-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 0;
-}
-.toc-item {
-  padding: 7px 14px;
-  color: #777;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: background 0.1s;
-}
-.toc-item:hover { color: #aaa; background: #222; }
-.toc-item.active {
-  background: #252525;
-  color: #e0e0e0;
-  border-left: 2px solid #4caf50;
-  padding-left: 12px;
 }
 
 #content-area {
@@ -137,50 +75,26 @@ body {
 <body>
 
 <div id="toolbar">
-  <button id="toc-toggle" onclick="toggleToc()">☰</button>
   <span id="position"></span>
 </div>
 
-<div id="main">
-  <div id="toc-sidebar">
-    <div id="toc-header">Contents</div>
-    <div id="toc-list"></div>
-  </div>
-  <div id="content-area">
-    <iframe id="content-frame" src="about:blank" sandbox="allow-same-origin allow-scripts"></iframe>
-    <div id="nav-footer">
-      <button class="nav-btn" id="prev-btn" onclick="doNavigate('prev')">← Prev</button>
-      <span id="book-title"></span>
-      <button class="nav-btn" id="next-btn" onclick="doNavigate('next')">Next →</button>
-    </div>
+<div id="content-area">
+  <iframe id="content-frame" src="about:blank" sandbox="allow-same-origin allow-scripts"></iframe>
+  <div id="nav-footer">
+    <button class="nav-btn" id="prev-btn" onclick="doNavigate('prev')">← Prev</button>
+    <span id="book-title"></span>
+    <button class="nav-btn" id="next-btn" onclick="doNavigate('next')">Next →</button>
   </div>
 </div>
 
 <script>
-var _toc = [];
 var _spineCount = 0;
 var _currentIndex = 0;
-
-function toggleToc() {
-  document.getElementById('toc-sidebar').classList.toggle('collapsed');
-}
 
 function doNavigate(direction) {
   window.webkit.messageHandlers.bridge.postMessage(
     { action: 'navigate', direction: direction });
 }
-
-function doJumpTo(tocEntryIndex) {
-  window.webkit.messageHandlers.bridge.postMessage(
-    { action: 'jumpTo', tocEntryIndex: tocEntryIndex });
-}
-
-function setActiveTocIndex(i) {
-  document.querySelectorAll('.toc-item').forEach(function(el, idx) {
-    el.classList.toggle('active', idx === i);
-  });
-}
-window.setActiveTocIndex = setActiveTocIndex;
 
 function injectObserver(iframe, tocAnchors) {
   if (!tocAnchors || !tocAnchors.length) return;
@@ -198,7 +112,10 @@ function injectObserver(iframe, tocAnchors) {
     if (visible.length > 0) {
       var target = visible[0].target;
       var match = targets.find(function(a) { return a.el === target; });
-      if (match) window.setActiveTocIndex(match.tocIndex);
+      if (match) {
+        window.webkit.messageHandlers.bridge.postMessage(
+          { action: 'tocSelectionChanged', tocEntryIndex: match.tocIndex });
+      }
     }
   }, { threshold: 0.1 });
 
@@ -206,22 +123,8 @@ function injectObserver(iframe, tocAnchors) {
 }
 
 function loadBook(data) {
-  _toc        = data.toc || [];
   _spineCount = data.spineCount;
   document.getElementById('book-title').textContent = data.title || '';
-
-  var list = document.getElementById('toc-list');
-  list.innerHTML = '';
-  _toc.forEach(function(entry, idx) {
-    var div = document.createElement('div');
-    div.className = 'toc-item';
-    div.style.paddingLeft = (14 + entry.depth * 12) + 'px';
-    div.textContent = entry.title;
-    div.onclick = (function(i) {
-      return function() { doJumpTo(i); };
-    })(idx);
-    list.appendChild(div);
-  });
 
   navigateTo({
     spineIndex:     data.currentIndex,
@@ -239,9 +142,6 @@ function navigateTo(data) {
     (_currentIndex + 1) + ' / ' + _spineCount;
   document.getElementById('prev-btn').disabled = (_currentIndex === 0);
   document.getElementById('next-btn').disabled = (_currentIndex === _spineCount - 1);
-
-  var active = (data.activeTocIndex !== undefined) ? data.activeTocIndex : -1;
-  setActiveTocIndex(active);
 
   var anchors = data.tocAnchors || [];
   frame.onload = anchors.length
