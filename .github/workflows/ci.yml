@@ -47,11 +47,11 @@ jobs:
         run: cmake --build build-release
 
       - name: Ad-hoc sign app bundle
-        run: codesign --force --deep --sign - build-release/src/ui/macos/ureader.app
+        run: codesign --force --deep --sign - build-release/modules/ui/macos/ureader.app
 
       - name: Upload app bundle
         uses: actions/upload-artifact@v4
         with:
           name: ureader-app
-          path: build-release/src/ui/macos/ureader.app
+          path: build-release/modules/ui/macos/ureader.app
           retention-days: 30

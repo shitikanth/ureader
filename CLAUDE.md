@@ -15,7 +15,7 @@ cmake -G Ninja -B build-release -DCMAKE_BUILD_TYPE=Release
 cmake --build build-release
 ```
 
-The app bundle is at `build/src/ui/macos/ureader.app`.
+The app bundle is at `build/modules/ui/macos/ureader.app`.
 
 ## Tests
 
