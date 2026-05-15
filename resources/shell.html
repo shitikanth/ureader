@@ -17,23 +17,48 @@ function injectObserver(iframe, tocAnchors) {
   if (!tocAnchors || !tocAnchors.length) return;
   var doc = iframe.contentDocument;
   if (!doc) return;
+  var win = iframe.contentWindow;
+  if (!win) return;
   var targets = tocAnchors
     .map(function(a) { return { el: doc.getElementById(a.id), tocIndex: a.tocIndex }; })
     .filter(function(a) { return !!a.el; });
   if (!targets.length) return;
 
-  var observer = new IntersectionObserver(function(entries) {
-    var visible = entries
-      .filter(function(e) { return e.isIntersecting; })
-      .sort(function(a, b) { return a.boundingClientRect.top - b.boundingClientRect.top; });
-    if (visible.length > 0) {
-      var match = targets.find(function(a) { return a.el === visible[0].target; });
-      if (match) window.webkit.messageHandlers.bridge.postMessage(
-        { action: 'tocSelectionChanged', tocEntryIndex: match.tocIndex });
-    }
-  }, { threshold: 0.1 });
+  // Active section = the anchor whose top has most recently passed a threshold
+  // line near the top of the viewport. Updates only fire after the user actually
+  // scrolls — so clicking a parent entry doesn't immediately jump selection to
+  // the first subsection that happens to sit at the top of the page.
+  var lastReportedIndex = -1;
+  var userHasScrolled = false;
+  var rafQueued = false;
+  var THRESHOLD_PX = 320;
 
-  targets.forEach(function(a) { observer.observe(a.el); });
+  function check() {
+    rafQueued = false;
+    if (!userHasScrolled) return;
+    var activeIndex = -1;
+    var activeTop = -Infinity;
+    for (var i = 0; i < targets.length; i++) {
+      var top = targets[i].el.getBoundingClientRect().top;
+      if (top <= THRESHOLD_PX && top > activeTop) {
+        activeTop = top;
+        activeIndex = targets[i].tocIndex;
+      }
+    }
+    if (activeIndex >= 0 && activeIndex !== lastReportedIndex) {
+      lastReportedIndex = activeIndex;
+      window.webkit.messageHandlers.bridge.postMessage(
+        { action: 'tocSelectionChanged', tocEntryIndex: activeIndex });
+    }
+  }
+
+  win.addEventListener('scroll', function() {
+    userHasScrolled = true;
+    if (!rafQueued) {
+      rafQueued = true;
+      win.requestAnimationFrame(check);
+    }
+  }, { passive: true });
 }
 
 function loadBook(data) {
