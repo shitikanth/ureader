@@ -10,6 +10,7 @@
 - (void)setUp {
     self.continueAfterFailure = NO;
     [self cleanStateFile];
+    [self cleanUserDefaults];
     _app = [[XCUIApplication alloc] initWithBundleIdentifier:@"com.ureader.app"];
     _app.launchArguments = @[@FIXTURE_EPUB_PATH];
     [_app launch];
@@ -18,12 +19,26 @@
 - (void)tearDown {
     [_app terminate];
     [self cleanStateFile];
+    [self cleanUserDefaults];
 }
 
 - (void)cleanStateFile {
     NSString *path = [NSHomeDirectory() stringByAppendingPathComponent:
                       @"Library/Application Support/ureader/state.json"];
     [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
+}
+
+- (void)cleanUserDefaults {
+    // Wipe com.ureader.app's NSUserDefaults so the NSSplitView autosave
+    // (sidebar collapsed/width) doesn't leak between tests. Goes through
+    // /usr/bin/defaults so cfprefsd flushes its in-memory cache.
+    NSTask *task = [[NSTask alloc] init];
+    task.launchPath = @"/usr/bin/defaults";
+    task.arguments  = @[@"delete", @"com.ureader.app"];
+    task.standardOutput = [NSPipe pipe];
+    task.standardError  = [NSPipe pipe];
+    [task launch];
+    [task waitUntilExit];
 }
 
 - (XCUIElement *)waitForWebView {
