@@ -1,5 +1,5 @@
 #import <AppKit/AppKit.h>
-#import "ui/macos/AppDelegate.h"
+#import "AppDelegate.h"
 
 int main(int argc, const char* argv[]) {
     @autoreleasepool {

@@ -2,7 +2,7 @@
 #import "TocSidebarViewController.h"
 #import "EpubSchemeHandler.h"
 #import "BridgeMessageHandler.h"
-#import "app/StateStore.h"
+#include "StateStore.h"
 #include "EpubParser.h"
 
 @interface EpubWindowController () <NSToolbarDelegate>
