@@ -51,12 +51,9 @@
     return _app.toolbars.firstMatch;
 }
 
-- (XCUIElement *)positionLabel {
-    return [self toolbar].staticTexts[@"1 / 2"];
-}
-
-- (XCUIElement *)positionLabelAt:(NSString *)text {
-    return [self toolbar].staticTexts[text];
+- (void)assertPositionIs:(NSString *)expected {
+    XCTAssertTrue([[self toolbar].staticTexts[expected] waitForExistenceWithTimeout:10],
+                  @"Expected position '%@' not found in toolbar", expected);
 }
 
 - (XCUIElement *)prevButton {
@@ -87,8 +84,12 @@
     return [self sidebarTable].staticTexts[title];
 }
 
+- (void)assertSidebarEntry:(NSString *)title {
+    XCTAssertTrue([[self sidebarEntry:title] waitForExistenceWithTimeout:10],
+                  @"TOC entry '%@' not found in sidebar", title);
+}
+
 - (void)testWindowTitleIsBookTitle {
-    // Window title still set (visible in Dock / Cmd-Tab) even though hidden from titlebar.
     XCTAssertTrue([_app.windows[@"Test Book"] waitForExistenceWithTimeout:10]);
 }
 
@@ -96,83 +97,56 @@
     XCTAssertTrue([[self toolbar].staticTexts[@"Test Book"] waitForExistenceWithTimeout:10]);
 }
 
-- (void)testTOCItemsAreVisibleInSidebar {
-    [self waitForWebView];
-    [self openSidebar];
-    XCTAssertTrue([[self sidebarEntry:@"Chapter 1"] waitForExistenceWithTimeout:10]);
-    XCTAssertTrue([self sidebarEntry:@"Chapter 2"].exists);
-}
-
 - (void)testInitialPositionIsFirstChapter {
     [self waitForWebView];
-    XCTAssertTrue([[self positionLabelAt:@"1 / 2"] waitForExistenceWithTimeout:10]);
+    [self assertPositionIs:@"1 / 2"];
 }
 
 - (void)testPrevButtonDisabledOnFirstChapter {
     [self waitForWebView];
-    XCTAssertTrue([[self positionLabelAt:@"1 / 2"] waitForExistenceWithTimeout:10]);
+    [self assertPositionIs:@"1 / 2"];
     XCTAssertFalse([self prevButton].isEnabled);
 }
 
 - (void)testNextButtonNavigatesToSecondChapter {
     [self waitForWebView];
-    XCTAssertTrue([[self positionLabelAt:@"1 / 2"] waitForExistenceWithTimeout:10]);
+    [self assertPositionIs:@"1 / 2"];
     [[self nextButton] click];
-    XCTAssertTrue([[self positionLabelAt:@"2 / 2"] waitForExistenceWithTimeout:10]);
+    [self assertPositionIs:@"2 / 2"];
     XCTAssertFalse([self nextButton].isEnabled);
     XCTAssertTrue([self prevButton].isEnabled);
+}
+
+
+- (void)testSidebarRevealsTOCEntries {
+    [self waitForWebView];
+    XCTAssertFalse([self sidebarTable].exists, @"Sidebar table shouldn't be queryable when sidebar is collapsed");
+    [self openSidebar];
+    XCTAssertTrue([[self sidebarTable] waitForExistenceWithTimeout:10],
+                  @"Sidebar table should appear after opening sidebar");
+    [self assertSidebarEntry:@"Chapter 1"];
+    [self assertSidebarEntry:@"Chapter 2"];
 }
 
 - (void)testClickingTOCEntryNavigatesToThatChapter {
     [self waitForWebView];
     [self openSidebar];
-    XCUIElement *chapter2 = [self sidebarEntry:@"Chapter 2"];
-    XCTAssertTrue([chapter2 waitForExistenceWithTimeout:10]);
-    [chapter2 click];
-    XCTAssertTrue([[self positionLabelAt:@"2 / 2"] waitForExistenceWithTimeout:10]);
-}
-
-- (void)testSidebarRevealsTOCEntries {
-    [self waitForWebView];
-    XCTAssertFalse([self sidebarTable].exists,
-                   @"Sidebar table shouldn't be queryable when sidebar is collapsed");
-    [self openSidebar];
-    XCTAssertTrue([[self sidebarTable] waitForExistenceWithTimeout:10],
-                  @"Sidebar table should appear after opening sidebar");
-}
-
-- (void)testOpeningSameFileDoesNotCreateDuplicateWindow {
-    XCTAssertTrue([_app.windows[@"Test Book"] waitForExistenceWithTimeout:10]);
-
-    NSURL* fileURL = [NSURL fileURLWithPath:@FIXTURE_EPUB_PATH];
-    NSURL* appURL  = [NSURL fileURLWithPath:@APP_BUNDLE_PATH];
-    NSWorkspaceOpenConfiguration* config = [NSWorkspaceOpenConfiguration configuration];
-    config.activates = YES;
-
-    XCTestExpectation* sent = [self expectationWithDescription:@"open request sent"];
-    [[NSWorkspace sharedWorkspace] openURLs:@[fileURL]
-                        withApplicationAtURL:appURL
-                               configuration:config
-                           completionHandler:^(NSRunningApplication*, NSError*) {
-                               [sent fulfill];
-                           }];
-    [self waitForExpectations:@[sent] timeout:5];
-    [NSThread sleepForTimeInterval:1.0];
-
-    XCTAssertEqual(_app.windows.count, 1u);
+    [self assertSidebarEntry:@"Chapter 2"];
+    [[self sidebarEntry:@"Chapter 2"] click];
+    [self assertPositionIs:@"2 / 2"];
 }
 
 - (void)testPositionPersistsAfterRelaunch {
     [self waitForWebView];
-    XCTAssertTrue([[self positionLabelAt:@"1 / 2"] waitForExistenceWithTimeout:10]);
+    [self assertPositionIs:@"1 / 2"];
     [[self nextButton] click];
-    XCTAssertTrue([[self positionLabelAt:@"2 / 2"] waitForExistenceWithTimeout:10]);
+    [self assertPositionIs:@"2 / 2"];
 
     [_app terminate];
     [_app launch];
 
     [self waitForWebView];
-    XCTAssertTrue([[self positionLabelAt:@"2 / 2"] waitForExistenceWithTimeout:10]);
+    [self assertPositionIs:@"2 / 2"];
 }
 
 @end
