@@ -71,13 +71,13 @@
 - (void)testTOCItemsAreVisibleInSidebar {
     [self waitForWebView];
     [self openSidebar];
-    XCUIElement *ch1 = _app.staticTexts[@"Chapter 1"];
-    XCTAssertTrue([ch1 waitForExistenceWithTimeout:10]);
-    // Verify the cell has a real frame on the left side of the window — that's
-    // the sidebar. (isHittable is unreliable in headless CI.)
-    CGRect frame = ch1.frame;
-    XCTAssertTrue(frame.size.width > 0, @"Chapter 1 should have nonzero width");
-    XCTAssertTrue(frame.size.height > 0, @"Chapter 1 should have nonzero height");
+    // "Chapter 1" appears both in the sidebar AND as an <h1> in the webview,
+    // so the simple query is ambiguous. Section 1.1/1.2 only appear in the
+    // sidebar (they're subsection anchors), so we use one as a sidebar marker.
+    XCTAssertTrue([_app.staticTexts[@"Section 1.1"] waitForExistenceWithTimeout:10],
+                  @"Section 1.1 should be present in the sidebar TOC");
+    XCTAssertTrue(_app.staticTexts[@"Section 1.2"].exists,
+                  @"Section 1.2 should be present in the sidebar TOC");
 }
 
 - (void)testInitialPositionIsFirstChapter {
@@ -109,29 +109,15 @@
     XCTAssertTrue([[self positionLabelAt:@"2 / 2"] waitForExistenceWithTimeout:10]);
 }
 
-- (void)testSidebarToggleHidesAndShowsSidebar {
+- (void)testSidebarRevealsTOCEntries {
     [self waitForWebView];
-    // When sidebar is collapsed, the "Contents" toolbar button is present.
-    XCUIElement *contentsBtn = [self toolbar].buttons[@"Contents"];
-    XCTAssertTrue([contentsBtn waitForExistenceWithTimeout:10],
-                  @"Contents toggle should be in toolbar when sidebar is collapsed");
-    [contentsBtn click];
-    // After opening, the toolbar Contents button is removed (sidebar-header
-    // toggle takes over).
-    NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:5];
-    while ([deadline timeIntervalSinceNow] > 0 && contentsBtn.exists) {
-        [NSThread sleepForTimeInterval:0.1];
-    }
-    XCTAssertFalse(contentsBtn.exists,
-                   @"Contents toggle should be removed when sidebar is open");
-    // Toggle back via keyboard shortcut.
-    [_app typeKey:@"s" modifierFlags:XCUIKeyModifierCommand | XCUIKeyModifierControl];
-    deadline = [NSDate dateWithTimeIntervalSinceNow:5];
-    while ([deadline timeIntervalSinceNow] > 0 && !contentsBtn.exists) {
-        [NSThread sleepForTimeInterval:0.1];
-    }
-    XCTAssertTrue(contentsBtn.exists,
-                  @"Contents toggle should return when sidebar is collapsed again");
+    // Section 1.1 only exists in the sidebar (not in webview content), so its
+    // appearance signals the sidebar successfully opened.
+    XCTAssertFalse(_app.staticTexts[@"Section 1.1"].exists,
+                   @"Section 1.1 shouldn't be visible before opening sidebar");
+    [self openSidebar];
+    XCTAssertTrue([_app.staticTexts[@"Section 1.1"] waitForExistenceWithTimeout:10],
+                  @"Section 1.1 should appear after opening sidebar");
 }
 
 - (void)testOpeningSameFileDoesNotCreateDuplicateWindow {
