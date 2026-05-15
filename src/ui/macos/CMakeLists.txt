@@ -3,7 +3,7 @@ find_library(WEBKIT WebKit REQUIRED)
 find_library(FOUNDATION Foundation REQUIRED)
 
 add_executable(ureader MACOSX_BUNDLE
-  ${PROJECT_SOURCE_DIR}/src/main.mm
+  main.mm
   AppDelegate.mm
   EpubWindowController.mm
   EpubSchemeHandler.mm
@@ -26,7 +26,7 @@ target_link_libraries(ureader epub app ${APPKIT} ${WEBKIT} ${FOUNDATION})
 
 # Enable ARC for all Objective-C++ files in this target
 set_source_files_properties(
-  ${PROJECT_SOURCE_DIR}/src/main.mm
+  main.mm
   AppDelegate.mm
   EpubWindowController.mm
   EpubSchemeHandler.mm

@@ -1,4 +1,4 @@
-#include "epub_internal.h"
+#include "EpubInternal.h"
 
 EpubBook::~EpubBook() {
     if (zip) {
