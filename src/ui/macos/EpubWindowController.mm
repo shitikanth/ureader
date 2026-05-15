@@ -142,7 +142,13 @@
 // MARK: - NSToolbarDelegate
 
 - (NSArray<NSToolbarItemIdentifier>*)toolbarDefaultItemIdentifiers:(NSToolbar*)tb {
-    return @[@"ToggleToc", @"BookTitle", NSToolbarFlexibleSpaceItemIdentifier, @"PrevChapter", @"PositionLabel", @"NextChapter"];
+    return @[NSToolbarFlexibleSpaceItemIdentifier,
+             @"ToggleToc",
+             NSToolbarSidebarTrackingSeparatorItemIdentifier,
+             NSToolbarFlexibleSpaceItemIdentifier,
+             @"BookTitle",
+             NSToolbarFlexibleSpaceItemIdentifier,
+             @"PrevChapter", @"PositionLabel", @"NextChapter"];
 }
 
 - (NSArray<NSToolbarItemIdentifier>*)toolbarAllowedItemIdentifiers:(NSToolbar*)tb {
@@ -271,6 +277,7 @@ willBeInsertedIntoToolbar:(BOOL)flag {
     };
     [self callJS:@"navigateTo" withData:data];
     [_tocSidebar setActiveTocIndex:entryIndex];
+    [self updateNavState];
 }
 
 - (void)setActiveTocIndex:(NSInteger)idx {
