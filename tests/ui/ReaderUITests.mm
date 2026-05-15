@@ -60,11 +60,12 @@
 }
 
 - (XCUIElement *)sidebarTable {
-    // NSTableView with NSTableViewStyleSourceList may surface as either an
-    // outline or table in XCUI depending on macOS version. Try both.
-    XCUIElement *byOutline = _app.outlines[@"TocTable"];
+    // NSTableView with NSTableViewStyleSourceList surfaces as an outline (or
+    // table on older macOS) in XCUI. The sidebar's table is the only one in
+    // the window, so firstMatch is sufficient.
+    XCUIElement *byOutline = _app.outlines.firstMatch;
     if (byOutline.exists) return byOutline;
-    return _app.tables[@"TocTable"];
+    return _app.tables.firstMatch;
 }
 
 - (XCUIElement *)sidebarEntry:(NSString *)title {
