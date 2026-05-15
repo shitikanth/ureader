@@ -8,6 +8,7 @@ add_executable(ureader MACOSX_BUNDLE
   EpubWindowController.mm
   EpubSchemeHandler.mm
   BridgeMessageHandler.mm
+  TocSidebarViewController.mm
   ${PROJECT_SOURCE_DIR}/resources/shell.html
 )
 set_source_files_properties(${PROJECT_SOURCE_DIR}/resources/shell.html
@@ -27,6 +28,7 @@ set_source_files_properties(
   EpubWindowController.mm
   EpubSchemeHandler.mm
   BridgeMessageHandler.mm
+  TocSidebarViewController.mm
   PROPERTIES COMPILE_FLAGS "-fobjc-arc"
 )
 

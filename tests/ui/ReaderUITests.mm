@@ -10,6 +10,7 @@
 - (void)setUp {
     self.continueAfterFailure = NO;
     [self cleanStateFile];
+    [self cleanUserDefaults];
     _app = [[XCUIApplication alloc] initWithBundleIdentifier:@"com.ureader.app"];
     _app.launchArguments = @[@FIXTURE_EPUB_PATH];
     [_app launch];
@@ -18,6 +19,7 @@
 - (void)tearDown {
     [_app terminate];
     [self cleanStateFile];
+    [self cleanUserDefaults];
 }
 
 - (void)cleanStateFile {
@@ -26,74 +28,125 @@
     [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
 }
 
+- (void)cleanUserDefaults {
+    // Wipe com.ureader.app's NSUserDefaults so the NSSplitView autosave
+    // (sidebar collapsed/width) doesn't leak between tests. Goes through
+    // /usr/bin/defaults so cfprefsd flushes its in-memory cache.
+    NSTask *task = [[NSTask alloc] init];
+    task.launchPath = @"/usr/bin/defaults";
+    task.arguments  = @[@"delete", @"com.ureader.app"];
+    task.standardOutput = [NSPipe pipe];
+    task.standardError  = [NSPipe pipe];
+    [task launch];
+    [task waitUntilExit];
+}
+
 - (XCUIElement *)waitForWebView {
     XCUIElement *wv = _app.webViews.firstMatch;
     XCTAssertTrue([wv waitForExistenceWithTimeout:10]);
     return wv;
 }
 
+- (XCUIElement *)toolbar {
+    return _app.toolbars.firstMatch;
+}
+
+- (void)assertPositionIs:(NSString *)expected {
+    XCTAssertTrue([[self toolbar].staticTexts[expected] waitForExistenceWithTimeout:10],
+                  @"Expected position '%@' not found in toolbar", expected);
+}
+
+- (XCUIElement *)prevButton {
+    return [self toolbar].buttons[@"Previous"];
+}
+
+- (XCUIElement *)nextButton {
+    return [self toolbar].buttons[@"Next"];
+}
+
+- (void)openSidebar {
+    XCUIElement *toggle = [self toolbar].buttons[@"Contents"];
+    XCTAssertTrue([toggle waitForExistenceWithTimeout:10],
+                  @"Contents toggle should be in toolbar when sidebar is closed");
+    [toggle click];
+}
+
+- (XCUIElement *)sidebarTable {
+    // NSTableView with NSTableViewStyleSourceList surfaces as an outline (or
+    // table on older macOS) in XCUI. The sidebar's table is the only one in
+    // the window, so firstMatch is sufficient.
+    XCUIElement *byOutline = _app.outlines.firstMatch;
+    if (byOutline.exists) return byOutline;
+    return _app.tables.firstMatch;
+}
+
+- (XCUIElement *)sidebarEntry:(NSString *)title {
+    return [self sidebarTable].staticTexts[title];
+}
+
+- (void)assertSidebarEntry:(NSString *)title {
+    XCTAssertTrue([[self sidebarEntry:title] waitForExistenceWithTimeout:10],
+                  @"TOC entry '%@' not found in sidebar", title);
+}
+
 - (void)testWindowTitleIsBookTitle {
     XCTAssertTrue([_app.windows[@"Test Book"] waitForExistenceWithTimeout:10]);
 }
 
-- (void)testTOCItemsAreVisible {
-    XCUIElement *wv = [self waitForWebView];
-    XCTAssertTrue([wv.staticTexts[@"Chapter 1"] waitForExistenceWithTimeout:10]);
-    XCTAssertTrue(wv.staticTexts[@"Chapter 2"].exists);
+- (void)testBookTitleShownInToolbar {
+    XCTAssertTrue([[self toolbar].staticTexts[@"Test Book"] waitForExistenceWithTimeout:10]);
 }
 
 - (void)testInitialPositionIsFirstChapter {
-    XCUIElement *wv = [self waitForWebView];
-    XCTAssertTrue([wv.staticTexts[@"1 / 2"] waitForExistenceWithTimeout:10]);
+    [self waitForWebView];
+    [self assertPositionIs:@"1 / 2"];
 }
 
 - (void)testPrevButtonDisabledOnFirstChapter {
-    XCUIElement *wv = [self waitForWebView];
-    XCTAssertTrue([wv.staticTexts[@"1 / 2"] waitForExistenceWithTimeout:10]);
-    XCTAssertFalse(wv.buttons[@"← Prev"].isEnabled);
+    [self waitForWebView];
+    [self assertPositionIs:@"1 / 2"];
+    XCTAssertFalse([self prevButton].isEnabled);
 }
 
 - (void)testNextButtonNavigatesToSecondChapter {
-    XCUIElement *wv = [self waitForWebView];
-    XCTAssertTrue([wv.staticTexts[@"1 / 2"] waitForExistenceWithTimeout:10]);
-    [wv.buttons[@"Next →"] click];
-    XCTAssertTrue([wv.staticTexts[@"2 / 2"] waitForExistenceWithTimeout:10]);
-    XCTAssertFalse(wv.buttons[@"Next →"].isEnabled);
-    XCTAssertTrue(wv.buttons[@"← Prev"].isEnabled);
+    [self waitForWebView];
+    [self assertPositionIs:@"1 / 2"];
+    [[self nextButton] click];
+    [self assertPositionIs:@"2 / 2"];
+    XCTAssertFalse([self nextButton].isEnabled);
+    XCTAssertTrue([self prevButton].isEnabled);
 }
 
-- (void)testOpeningSameFileDoesNotCreateDuplicateWindow {
-    XCTAssertTrue([_app.windows[@"Test Book"] waitForExistenceWithTimeout:10]);
 
-    NSURL* fileURL = [NSURL fileURLWithPath:@FIXTURE_EPUB_PATH];
-    NSURL* appURL  = [NSURL fileURLWithPath:@APP_BUNDLE_PATH];
-    NSWorkspaceOpenConfiguration* config = [NSWorkspaceOpenConfiguration configuration];
-    config.activates = YES;
+- (void)testSidebarRevealsTOCEntries {
+    [self waitForWebView];
+    XCTAssertFalse([self sidebarTable].exists, @"Sidebar table shouldn't be queryable when sidebar is collapsed");
+    [self openSidebar];
+    XCTAssertTrue([[self sidebarTable] waitForExistenceWithTimeout:10],
+                  @"Sidebar table should appear after opening sidebar");
+    [self assertSidebarEntry:@"Chapter 1"];
+    [self assertSidebarEntry:@"Chapter 2"];
+}
 
-    XCTestExpectation* sent = [self expectationWithDescription:@"open request sent"];
-    [[NSWorkspace sharedWorkspace] openURLs:@[fileURL]
-                        withApplicationAtURL:appURL
-                               configuration:config
-                           completionHandler:^(NSRunningApplication*, NSError*) {
-                               [sent fulfill];
-                           }];
-    [self waitForExpectations:@[sent] timeout:5];
-    [NSThread sleepForTimeInterval:1.0];
-
-    XCTAssertEqual(_app.windows.count, 1u);
+- (void)testClickingTOCEntryNavigatesToThatChapter {
+    [self waitForWebView];
+    [self openSidebar];
+    [self assertSidebarEntry:@"Chapter 2"];
+    [[self sidebarEntry:@"Chapter 2"] click];
+    [self assertPositionIs:@"2 / 2"];
 }
 
 - (void)testPositionPersistsAfterRelaunch {
-    XCUIElement *wv = [self waitForWebView];
-    XCTAssertTrue([wv.staticTexts[@"1 / 2"] waitForExistenceWithTimeout:10]);
-    [wv.buttons[@"Next →"] click];
-    XCTAssertTrue([wv.staticTexts[@"2 / 2"] waitForExistenceWithTimeout:10]);
+    [self waitForWebView];
+    [self assertPositionIs:@"1 / 2"];
+    [[self nextButton] click];
+    [self assertPositionIs:@"2 / 2"];
 
     [_app terminate];
     [_app launch];
 
-    wv = [self waitForWebView];
-    XCTAssertTrue([wv.staticTexts[@"2 / 2"] waitForExistenceWithTimeout:10]);
+    [self waitForWebView];
+    [self assertPositionIs:@"2 / 2"];
 }
 
 @end

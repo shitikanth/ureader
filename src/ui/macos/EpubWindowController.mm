@@ -1,15 +1,23 @@
 #import "EpubWindowController.h"
+#import "TocSidebarViewController.h"
 #import "EpubSchemeHandler.h"
 #import "BridgeMessageHandler.h"
 #import "app/StateStore.h"
 #include "EpubParser.h"
 
+@interface EpubWindowController () <NSToolbarDelegate>
+@end
+
 @implementation EpubWindowController {
-    NSWindow*   _window;
-    WKWebView*  _webView;
-    std::unique_ptr<EpubBook> _book;
-    NSInteger   _currentSpineIndex;
-    NSInteger   _activeTocIndex;
+    NSWindow*                   _window;
+    WKWebView*                  _webView;
+    TocSidebarViewController*   _tocSidebar;
+    NSSplitViewItem*            _tocSplitItem;
+    NSTextField*                _positionLabel;
+    NSTextField*                _bookTitleLabel;
+    std::unique_ptr<EpubBook>   _book;
+    NSInteger                   _currentSpineIndex;
+    NSInteger                   _activeTocIndex;
     __strong EpubWindowController* _selfRef;
 }
 
@@ -22,31 +30,31 @@
     _currentSpineIndex = StateStore::shared().positionForUID(_book->metadata.uid);
     _activeTocIndex = [self firstTocIndexForSpineIndex:_currentSpineIndex];
 
-    NSRect frame = NSMakeRect(0, 0, 900, 700);
+    NSRect frame = NSMakeRect(0, 0, 1100, 740);
     _window = [[NSWindow alloc]
         initWithContentRect:frame
                   styleMask:(NSWindowStyleMaskTitled |
                              NSWindowStyleMaskClosable |
                              NSWindowStyleMaskMiniaturizable |
-                             NSWindowStyleMaskResizable)
+                             NSWindowStyleMaskResizable |
+                             NSWindowStyleMaskFullSizeContentView)
                     backing:NSBackingStoreBuffered
                       defer:NO];
+    _window.titlebarAppearsTransparent = YES;
+    _window.titleVisibility = NSWindowTitleHidden;
     NSString* title = [NSString stringWithUTF8String:_book->metadata.title.c_str()];
     _window.title = title.length ? title : @"ureader";
     _window.delegate = self;
     _selfRef = self;
-    [_window center];
 
+    // ── WebView ──────────────────────────────────────────────────────
     WKWebViewConfiguration* config = [[WKWebViewConfiguration alloc] init];
     EpubSchemeHandler* handler = [[EpubSchemeHandler alloc] initWithBook:_book.get()];
     [config setURLSchemeHandler:handler forURLScheme:@"epub"];
     BridgeMessageHandler* bridge = [[BridgeMessageHandler alloc] initWithController:self];
     [config.userContentController addScriptMessageHandler:bridge name:@"bridge"];
 
-    _webView = [[WKWebView alloc] initWithFrame:_window.contentView.bounds
-                                  configuration:config];
-    _webView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-    [_window.contentView addSubview:_webView];
+    _webView = [[WKWebView alloc] initWithFrame:NSZeroRect configuration:config];
 
     NSString* shellPath = [[NSBundle mainBundle] pathForResource:@"shell" ofType:@"html"];
     if (!shellPath) { NSLog(@"ureader: shell.html not found in bundle"); return nil; }
@@ -55,8 +63,74 @@
                                                encoding:NSUTF8StringEncoding
                                                   error:&err];
     if (!html) { NSLog(@"ureader: failed to read shell.html: %@", err); return nil; }
-    // epub://book origin — same as chapter content so shell can access iframe.contentDocument
     [_webView loadHTMLString:html baseURL:[NSURL URLWithString:@"epub://book/shell"]];
+
+    // ── TOC sidebar ──────────────────────────────────────────────────
+    _tocSidebar = [[TocSidebarViewController alloc] initWithToc:&_book->toc
+                                                     controller:self];
+
+    // ── Split view ───────────────────────────────────────────────────
+    // Wrap WKWebView so it can be constrained to safeAreaLayoutGuide.topAnchor —
+    // WKWebView ignores safe area insets on its own and would overlap the toolbar.
+    NSView* contentWrap = [[NSView alloc] init];
+    _webView.translatesAutoresizingMaskIntoConstraints = NO;
+    [contentWrap addSubview:_webView];
+    [NSLayoutConstraint activateConstraints:@[
+        [_webView.topAnchor constraintEqualToAnchor:contentWrap.safeAreaLayoutGuide.topAnchor],
+        [_webView.bottomAnchor constraintEqualToAnchor:contentWrap.bottomAnchor],
+        [_webView.leadingAnchor constraintEqualToAnchor:contentWrap.leadingAnchor],
+        [_webView.trailingAnchor constraintEqualToAnchor:contentWrap.trailingAnchor],
+    ]];
+
+    NSViewController* contentVC = [[NSViewController alloc] initWithNibName:nil bundle:nil];
+    contentVC.view = contentWrap;
+
+    _tocSplitItem = [NSSplitViewItem sidebarWithViewController:_tocSidebar];
+    _tocSplitItem.minimumThickness = 260;
+    _tocSplitItem.maximumThickness = 420;
+    _tocSplitItem.collapsed = YES;
+    _tocSplitItem.allowsFullHeightLayout = YES;
+
+    NSSplitViewItem* contentItem = [NSSplitViewItem splitViewItemWithViewController:contentVC];
+    contentItem.minimumThickness = 400;
+
+    NSSplitViewController* splitVC = [[NSSplitViewController alloc] init];
+    [splitVC addSplitViewItem:_tocSplitItem];
+    [splitVC addSplitViewItem:contentItem];
+    splitVC.splitView.vertical = YES;
+    splitVC.splitView.autosaveName = @"MainSplitView";
+
+    _window.contentViewController = splitVC;
+    _window.minSize = NSMakeSize(700, 500);
+    [_window setContentSize:NSMakeSize(1100, 740)];
+    [_window center];
+
+    // ── Toolbar ──────────────────────────────────────────────────────
+    NSToolbar* toolbar = [[NSToolbar alloc] initWithIdentifier:@"MainToolbar"];
+    toolbar.delegate = (id<NSToolbarDelegate>)self;
+    toolbar.displayMode = NSToolbarDisplayModeIconOnly;
+    toolbar.centeredItemIdentifiers = [NSSet setWithObject:@"BookTitle"];
+    _window.toolbarStyle = NSWindowToolbarStyleUnified;
+    _window.toolbar = toolbar;
+
+    // ── View menu ────────────────────────────────────────────────────
+    NSMenu* menuBar = [NSApp mainMenu];
+    NSMenuItem* viewMenuItem = [menuBar itemWithTitle:@"View"];
+    if (!viewMenuItem) {
+        viewMenuItem = [[NSMenuItem alloc] initWithTitle:@"View" action:nil keyEquivalent:@""];
+        NSMenu* viewMenu = [[NSMenu alloc] initWithTitle:@"View"];
+        viewMenuItem.submenu = viewMenu;
+        [menuBar addItem:viewMenuItem];
+    }
+    if (![viewMenuItem.submenu itemWithTitle:@"Table of Contents"]) {
+        NSMenuItem* tocItem = [[NSMenuItem alloc]
+            initWithTitle:@"Table of Contents"
+                   action:@selector(toggleTocSidebar:)
+            keyEquivalent:@"s"];
+        tocItem.keyEquivalentModifierMask = NSEventModifierFlagCommand | NSEventModifierFlagControl;
+        tocItem.target = self;
+        [viewMenuItem.submenu addItem:tocItem];
+    }
 
     return self;
 }
@@ -65,7 +139,105 @@
     [_window makeKeyAndOrderFront:nil];
 }
 
-// ── Bridge callbacks ──────────────────────────────────────────────
+// MARK: - NSToolbarDelegate
+
+- (NSArray<NSToolbarItemIdentifier>*)toolbarDefaultItemIdentifiers:(NSToolbar*)tb {
+    return @[NSToolbarFlexibleSpaceItemIdentifier,
+             @"ToggleToc",
+             NSToolbarSidebarTrackingSeparatorItemIdentifier,
+             NSToolbarFlexibleSpaceItemIdentifier,
+             @"BookTitle",
+             NSToolbarFlexibleSpaceItemIdentifier,
+             @"PrevChapter", @"PositionLabel", @"NextChapter"];
+}
+
+- (NSArray<NSToolbarItemIdentifier>*)toolbarAllowedItemIdentifiers:(NSToolbar*)tb {
+    return [self toolbarDefaultItemIdentifiers:tb];
+}
+
+- (NSToolbarItem*)toolbar:(NSToolbar*)toolbar
+    itemForItemIdentifier:(NSToolbarItemIdentifier)itemIdentifier
+willBeInsertedIntoToolbar:(BOOL)flag {
+    if ([itemIdentifier isEqualToString:@"ToggleToc"]) {
+        NSToolbarItem* item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+        item.label = @"Contents";
+        item.toolTip = @"Show or hide the table of contents";
+        item.image = [NSImage imageWithSystemSymbolName:@"sidebar.left"
+                                accessibilityDescription:@"Toggle sidebar"];
+        item.target = self;
+        item.action = @selector(toggleTocSidebar:);
+        return item;
+    }
+    if ([itemIdentifier isEqualToString:@"BookTitle"]) {
+        NSToolbarItem* item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+        item.label = @"";
+        _bookTitleLabel = [NSTextField labelWithString:_window.title];
+        _bookTitleLabel.font = [NSFont systemFontOfSize:13 weight:NSFontWeightSemibold];
+        _bookTitleLabel.textColor = NSColor.labelColor;
+        _bookTitleLabel.alignment = NSTextAlignmentCenter;
+        _bookTitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+        item.view = _bookTitleLabel;
+        return item;
+    }
+    if ([itemIdentifier isEqualToString:@"PrevChapter"]) {
+        NSToolbarItem* item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+        item.label = @"Previous";
+        item.toolTip = @"Previous chapter";
+        item.image = [NSImage imageWithSystemSymbolName:@"chevron.left"
+                                accessibilityDescription:@"Previous chapter"];
+        item.target = self;
+        item.action = @selector(prevChapter:);
+        return item;
+    }
+    if ([itemIdentifier isEqualToString:@"NextChapter"]) {
+        NSToolbarItem* item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+        item.label = @"Next";
+        item.toolTip = @"Next chapter";
+        item.image = [NSImage imageWithSystemSymbolName:@"chevron.right"
+                                accessibilityDescription:@"Next chapter"];
+        item.target = self;
+        item.action = @selector(nextChapter:);
+        return item;
+    }
+    if ([itemIdentifier isEqualToString:@"PositionLabel"]) {
+        NSToolbarItem* item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+        item.label = @"";
+        _positionLabel = [NSTextField labelWithString:@""];
+        _positionLabel.alignment = NSTextAlignmentCenter;
+        _positionLabel.textColor = NSColor.secondaryLabelColor;
+        _positionLabel.font = [NSFont monospacedDigitSystemFontOfSize:12 weight:NSFontWeightRegular];
+        _positionLabel.translatesAutoresizingMaskIntoConstraints = NO;
+        [NSLayoutConstraint activateConstraints:@[
+            [_positionLabel.widthAnchor constraintEqualToConstant:60],
+        ]];
+        item.view = _positionLabel;
+        return item;
+    }
+    return nil;
+}
+
+- (void)toggleTocSidebar:(id)sender {
+    [_tocSplitItem.animator setCollapsed:!_tocSplitItem.isCollapsed];
+}
+
+- (void)prevChapter:(id)sender {
+    if (_currentSpineIndex > 0) [self setSpineIndex:_currentSpineIndex - 1];
+}
+
+- (void)nextChapter:(id)sender {
+    if (_currentSpineIndex < (NSInteger)_book->spine.size() - 1)
+        [self setSpineIndex:_currentSpineIndex + 1];
+}
+
+- (BOOL)validateToolbarItem:(NSToolbarItem*)item {
+    if ([item.itemIdentifier isEqualToString:@"PrevChapter"])
+        return _currentSpineIndex > 0;
+    if ([item.itemIdentifier isEqualToString:@"NextChapter"])
+        return _currentSpineIndex < (NSInteger)_book->spine.size() - 1;
+    return YES;
+}
+
+// MARK: - Bridge callbacks
 
 - (void)shellReady {
     NSMutableArray* tocArray = [NSMutableArray array];
@@ -87,15 +259,8 @@
         @"tocAnchors":     [self tocAnchorsForSpineIndex:_currentSpineIndex]
     };
     [self callJS:@"loadBook" withData:data];
-}
-
-- (void)navigate:(NSString*)direction {
-    NSInteger next = _currentSpineIndex;
-    if ([direction isEqualToString:@"next"])
-        next = MIN(_currentSpineIndex + 1, (NSInteger)_book->spine.size() - 1);
-    else if ([direction isEqualToString:@"prev"])
-        next = MAX(_currentSpineIndex - 1, 0);
-    if (next != _currentSpineIndex) [self setSpineIndex:next];
+    [_tocSidebar setActiveTocIndex:_activeTocIndex];
+    [self updateNavState];
 }
 
 - (void)jumpToTocEntryIndex:(NSInteger)entryIndex {
@@ -111,9 +276,23 @@
         @"tocAnchors":     [self tocAnchorsForSpineIndex:_currentSpineIndex]
     };
     [self callJS:@"navigateTo" withData:data];
+    [_tocSidebar setActiveTocIndex:entryIndex];
+    [self updateNavState];
 }
 
-// ── Private helpers ───────────────────────────────────────────────
+- (void)setActiveTocIndex:(NSInteger)idx {
+    _activeTocIndex = idx;
+    [_tocSidebar setActiveTocIndex:idx];
+}
+
+// MARK: - Private helpers
+
+- (void)updateNavState {
+    _positionLabel.stringValue = [NSString stringWithFormat:@"%ld / %lu",
+                                  (long)(_currentSpineIndex + 1),
+                                  (unsigned long)_book->spine.size()];
+    [_window.toolbar validateVisibleItems];
+}
 
 - (void)setSpineIndex:(NSInteger)index {
     _currentSpineIndex = index;
@@ -126,6 +305,8 @@
         @"tocAnchors":     [self tocAnchorsForSpineIndex:index]
     };
     [self callJS:@"navigateTo" withData:data];
+    [_tocSidebar setActiveTocIndex:_activeTocIndex];
+    [self updateNavState];
 }
 
 - (NSString*)urlForSpineIndex:(NSInteger)index {
