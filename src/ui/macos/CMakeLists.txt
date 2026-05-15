@@ -36,7 +36,7 @@ set_source_files_properties(
 )
 
 set_target_properties(ureader PROPERTIES
-  MACOSX_BUNDLE_INFO_PLIST ${PROJECT_SOURCE_DIR}/Info.plist
+  MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist
   MACOSX_BUNDLE_BUNDLE_NAME "ureader"
   MACOSX_BUNDLE_GUI_IDENTIFIER "com.ureader.app"
 )
