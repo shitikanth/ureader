@@ -20,6 +20,10 @@
         [_controller shellReady];
     } else if ([action isEqualToString:@"tocSelectionChanged"]) {
         [_controller setActiveTocIndex:[body[@"tocEntryIndex"] integerValue]];
+    } else if ([action isEqualToString:@"nextChapter"]) {
+        [_controller nextChapter:nil];
+    } else if ([action isEqualToString:@"prevChapter"]) {
+        [_controller prevChapterToEnd];
     }
 }
 

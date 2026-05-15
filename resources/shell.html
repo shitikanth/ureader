@@ -68,11 +68,39 @@ function loadBook(data) {
   });
 }
 
+function injectOverscroll(iframe) {
+  var win = iframe.contentWindow;
+  var doc = iframe.contentDocument;
+  if (doc && doc.body) doc.body.style.paddingBottom = '40vh';
+  if (!win || !doc) return;
+  var cooldown = false;
+  win.addEventListener('wheel', function(e) {
+    if (cooldown) return;
+    var el = doc.documentElement;
+    var atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+    var atTop = el.scrollTop <= 0;
+    if (e.deltaY > 0 && atBottom) {
+      cooldown = true;
+      window.webkit.messageHandlers.bridge.postMessage({ action: 'nextChapter' });
+    } else if (e.deltaY < 0 && atTop) {
+      cooldown = true;
+      window.webkit.messageHandlers.bridge.postMessage({ action: 'prevChapter' });
+    }
+  }, { passive: true });
+}
+
 function navigateTo(data) {
   var frame = document.getElementById('content-frame');
   frame.src = data.url;
   var anchors = data.tocAnchors || [];
-  frame.onload = anchors.length ? function() { injectObserver(frame, anchors); } : null;
+  frame.onload = function() {
+    if (data.scrollToEnd) {
+      var d = frame.contentDocument.documentElement;
+      d.scrollTop = d.scrollHeight;
+    }
+    injectOverscroll(frame);
+    if (anchors.length) injectObserver(frame, anchors);
+  };
 }
 
 window.webkit.messageHandlers.bridge.postMessage({ action: 'ready' });

@@ -12,6 +12,9 @@
 // Called by BridgeMessageHandler
 - (void)shellReady;
 - (void)setActiveTocIndex:(NSInteger)idx;
+- (void)nextChapter:(id)sender;
+- (void)prevChapter:(id)sender;
+- (void)prevChapterToEnd;
 // Called by TocSidebarViewController
 - (void)jumpToTocEntryIndex:(NSInteger)entryIndex;
 @end
