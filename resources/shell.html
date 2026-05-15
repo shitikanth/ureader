@@ -93,6 +93,10 @@ function navigateTo(data) {
   frame.src = data.url;
   var anchors = data.tocAnchors || [];
   frame.onload = function() {
+    if (data.scrollToEnd) {
+      var d = frame.contentDocument.documentElement;
+      d.scrollTop = d.scrollHeight;
+    }
     injectOverscroll(frame);
     if (anchors.length) injectObserver(frame, anchors);
   };

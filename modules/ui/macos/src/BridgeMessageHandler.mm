@@ -23,7 +23,7 @@
     } else if ([action isEqualToString:@"nextChapter"]) {
         [_controller nextChapter:nil];
     } else if ([action isEqualToString:@"prevChapter"]) {
-        [_controller prevChapter:nil];
+        [_controller prevChapterToEnd];
     }
 }
 

@@ -225,6 +225,10 @@ willBeInsertedIntoToolbar:(BOOL)flag {
     if (_currentSpineIndex > 0) [self setSpineIndex:_currentSpineIndex - 1];
 }
 
+- (void)prevChapterToEnd {
+    if (_currentSpineIndex > 0) [self setSpineIndex:_currentSpineIndex - 1 scrollToEnd:YES];
+}
+
 - (void)nextChapter:(id)sender {
     if (_currentSpineIndex < (NSInteger)_book->spine.size() - 1)
         [self setSpineIndex:_currentSpineIndex + 1];
@@ -296,6 +300,10 @@ willBeInsertedIntoToolbar:(BOOL)flag {
 }
 
 - (void)setSpineIndex:(NSInteger)index {
+    [self setSpineIndex:index scrollToEnd:NO];
+}
+
+- (void)setSpineIndex:(NSInteger)index scrollToEnd:(BOOL)scrollToEnd {
     _currentSpineIndex = index;
     _activeTocIndex    = [self firstTocIndexForSpineIndex:index];
     StateStore::shared().setPosition(static_cast<int>(index), _book->metadata.uid);
@@ -303,7 +311,8 @@ willBeInsertedIntoToolbar:(BOOL)flag {
         @"spineIndex":     @(index),
         @"url":            [self urlForSpineIndex:index],
         @"activeTocIndex": @(_activeTocIndex),
-        @"tocAnchors":     [self tocAnchorsForSpineIndex:index]
+        @"tocAnchors":     [self tocAnchorsForSpineIndex:index],
+        @"scrollToEnd":    @(scrollToEnd)
     };
     [self callJS:@"navigateTo" withData:data];
     [_tocSidebar setActiveTocIndex:_activeTocIndex];
