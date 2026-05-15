@@ -71,6 +71,7 @@ function loadBook(data) {
 function injectOverscroll(iframe) {
   var win = iframe.contentWindow;
   var doc = iframe.contentDocument;
+  if (doc && doc.body) doc.body.style.paddingBottom = '40vh';
   if (!win || !doc) return;
   var cooldown = false;
   win.addEventListener('wheel', function(e) {
