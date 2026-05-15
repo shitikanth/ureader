@@ -32,34 +32,98 @@
     return wv;
 }
 
+- (XCUIElement *)toolbar {
+    return _app.toolbars.firstMatch;
+}
+
+- (XCUIElement *)positionLabel {
+    return [self toolbar].staticTexts[@"1 / 2"];
+}
+
+- (XCUIElement *)positionLabelAt:(NSString *)text {
+    return [self toolbar].staticTexts[text];
+}
+
+- (XCUIElement *)prevButton {
+    return [self toolbar].buttons[@"Previous"];
+}
+
+- (XCUIElement *)nextButton {
+    return [self toolbar].buttons[@"Next"];
+}
+
+- (void)openSidebar {
+    XCUIElement *toggle = [self toolbar].buttons[@"Contents"];
+    XCTAssertTrue([toggle waitForExistenceWithTimeout:10],
+                  @"Contents toggle should be in toolbar when sidebar is closed");
+    [toggle click];
+}
+
 - (void)testWindowTitleIsBookTitle {
+    // Window title still set (visible in Dock / Cmd-Tab) even though hidden from titlebar.
     XCTAssertTrue([_app.windows[@"Test Book"] waitForExistenceWithTimeout:10]);
 }
 
-- (void)testTOCItemsAreVisible {
-    XCUIElement *wv = [self waitForWebView];
-    XCTAssertTrue([wv.staticTexts[@"Chapter 1"] waitForExistenceWithTimeout:10]);
-    XCTAssertTrue(wv.staticTexts[@"Chapter 2"].exists);
+- (void)testBookTitleShownInToolbar {
+    XCTAssertTrue([[self toolbar].staticTexts[@"Test Book"] waitForExistenceWithTimeout:10]);
+}
+
+- (void)testTOCItemsAreVisibleInSidebar {
+    [self waitForWebView];
+    [self openSidebar];
+    XCTAssertTrue([_app.staticTexts[@"Chapter 1"] waitForExistenceWithTimeout:10]);
+    XCTAssertTrue(_app.staticTexts[@"Chapter 2"].exists);
 }
 
 - (void)testInitialPositionIsFirstChapter {
-    XCUIElement *wv = [self waitForWebView];
-    XCTAssertTrue([wv.staticTexts[@"1 / 2"] waitForExistenceWithTimeout:10]);
+    [self waitForWebView];
+    XCTAssertTrue([[self positionLabelAt:@"1 / 2"] waitForExistenceWithTimeout:10]);
 }
 
 - (void)testPrevButtonDisabledOnFirstChapter {
-    XCUIElement *wv = [self waitForWebView];
-    XCTAssertTrue([wv.staticTexts[@"1 / 2"] waitForExistenceWithTimeout:10]);
-    XCTAssertFalse(wv.buttons[@"← Prev"].isEnabled);
+    [self waitForWebView];
+    XCTAssertTrue([[self positionLabelAt:@"1 / 2"] waitForExistenceWithTimeout:10]);
+    XCTAssertFalse([self prevButton].isEnabled);
 }
 
 - (void)testNextButtonNavigatesToSecondChapter {
-    XCUIElement *wv = [self waitForWebView];
-    XCTAssertTrue([wv.staticTexts[@"1 / 2"] waitForExistenceWithTimeout:10]);
-    [wv.buttons[@"Next →"] click];
-    XCTAssertTrue([wv.staticTexts[@"2 / 2"] waitForExistenceWithTimeout:10]);
-    XCTAssertFalse(wv.buttons[@"Next →"].isEnabled);
-    XCTAssertTrue(wv.buttons[@"← Prev"].isEnabled);
+    [self waitForWebView];
+    XCTAssertTrue([[self positionLabelAt:@"1 / 2"] waitForExistenceWithTimeout:10]);
+    [[self nextButton] click];
+    XCTAssertTrue([[self positionLabelAt:@"2 / 2"] waitForExistenceWithTimeout:10]);
+    XCTAssertFalse([self nextButton].isEnabled);
+    XCTAssertTrue([self prevButton].isEnabled);
+}
+
+- (void)testClickingTOCEntryNavigatesToThatChapter {
+    [self waitForWebView];
+    [self openSidebar];
+    XCUIElement *chapter2 = _app.staticTexts[@"Chapter 2"];
+    XCTAssertTrue([chapter2 waitForExistenceWithTimeout:10]);
+    [chapter2 click];
+    XCTAssertTrue([[self positionLabelAt:@"2 / 2"] waitForExistenceWithTimeout:10]);
+}
+
+- (void)testSidebarToggleHidesAndShowsSidebar {
+    [self waitForWebView];
+    XCTAssertFalse(_app.staticTexts[@"Chapter 1"].exists,
+                   @"Sidebar starts collapsed; TOC shouldn't be visible yet");
+    [self openSidebar];
+    XCTAssertTrue([_app.staticTexts[@"Chapter 1"] waitForExistenceWithTimeout:10]);
+    // After opening, the toolbar Contents button is removed; a sidebar-header
+    // toggle in the sidebar column takes over. Click anywhere a sidebar.left
+    // button exists to collapse again.
+    XCUIElement *headerToggle = _app.buttons[@"Toggle sidebar"];
+    if ([headerToggle waitForExistenceWithTimeout:2]) {
+        [headerToggle click];
+    } else {
+        // Fall back to View menu shortcut
+        [_app typeKey:@"s" modifierFlags:XCUIKeyModifierCommand | XCUIKeyModifierControl];
+    }
+    // Give the animation a moment, then verify TOC is hidden
+    [NSThread sleepForTimeInterval:0.6];
+    XCTAssertFalse(_app.staticTexts[@"Chapter 1"].exists,
+                   @"Chapter 1 should not be visible after collapsing sidebar");
 }
 
 - (void)testOpeningSameFileDoesNotCreateDuplicateWindow {
@@ -84,16 +148,16 @@
 }
 
 - (void)testPositionPersistsAfterRelaunch {
-    XCUIElement *wv = [self waitForWebView];
-    XCTAssertTrue([wv.staticTexts[@"1 / 2"] waitForExistenceWithTimeout:10]);
-    [wv.buttons[@"Next →"] click];
-    XCTAssertTrue([wv.staticTexts[@"2 / 2"] waitForExistenceWithTimeout:10]);
+    [self waitForWebView];
+    XCTAssertTrue([[self positionLabelAt:@"1 / 2"] waitForExistenceWithTimeout:10]);
+    [[self nextButton] click];
+    XCTAssertTrue([[self positionLabelAt:@"2 / 2"] waitForExistenceWithTimeout:10]);
 
     [_app terminate];
     [_app launch];
 
-    wv = [self waitForWebView];
-    XCTAssertTrue([wv.staticTexts[@"2 / 2"] waitForExistenceWithTimeout:10]);
+    [self waitForWebView];
+    XCTAssertTrue([[self positionLabelAt:@"2 / 2"] waitForExistenceWithTimeout:10]);
 }
 
 @end
