@@ -149,6 +149,16 @@
                   @"Epub content should remain after clicking external link");
 }
 
+- (void)testOverscrollAtBottomLoadsNextChapter {
+    XCUIElement *wv = [self waitForWebView];
+    [self assertPositionIs:@"1 / 2"];
+    // Swipe up repeatedly to reach the bottom of the short chapter and overscroll.
+    [wv swipeUp];
+    [wv swipeUp];
+    [wv swipeUp];
+    [self assertPositionIs:@"2 / 2"];
+}
+
 - (void)testPositionPersistsAfterRelaunch {
     [self waitForWebView];
     [self assertPositionIs:@"1 / 2"];
