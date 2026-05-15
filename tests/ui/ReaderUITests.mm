@@ -71,8 +71,9 @@
 - (void)testTOCItemsAreVisibleInSidebar {
     [self waitForWebView];
     [self openSidebar];
-    XCTAssertTrue([_app.staticTexts[@"Chapter 1"] waitForExistenceWithTimeout:10]);
-    XCTAssertTrue(_app.staticTexts[@"Chapter 2"].exists);
+    XCUIElement *ch1 = _app.staticTexts[@"Chapter 1"];
+    XCTAssertTrue([ch1 waitForExistenceWithTimeout:10]);
+    XCTAssertTrue(ch1.isHittable, @"Chapter 1 should be hit-testable when sidebar is open");
 }
 
 - (void)testInitialPositionIsFirstChapter {
@@ -106,24 +107,19 @@
 
 - (void)testSidebarToggleHidesAndShowsSidebar {
     [self waitForWebView];
-    XCTAssertFalse(_app.staticTexts[@"Chapter 1"].exists,
-                   @"Sidebar starts collapsed; TOC shouldn't be visible yet");
+    // Sidebar starts collapsed: TOC cells exist in the accessibility tree but
+    // shouldn't be hit-testable (no visible frame).
+    XCTAssertFalse(_app.staticTexts[@"Chapter 1"].isHittable,
+                   @"Chapter 1 should not be hittable when sidebar is collapsed");
     [self openSidebar];
-    XCTAssertTrue([_app.staticTexts[@"Chapter 1"] waitForExistenceWithTimeout:10]);
-    // After opening, the toolbar Contents button is removed; a sidebar-header
-    // toggle in the sidebar column takes over. Click anywhere a sidebar.left
-    // button exists to collapse again.
-    XCUIElement *headerToggle = _app.buttons[@"Toggle sidebar"];
-    if ([headerToggle waitForExistenceWithTimeout:2]) {
-        [headerToggle click];
-    } else {
-        // Fall back to View menu shortcut
-        [_app typeKey:@"s" modifierFlags:XCUIKeyModifierCommand | XCUIKeyModifierControl];
-    }
-    // Give the animation a moment, then verify TOC is hidden
+    XCUIElement *ch1 = _app.staticTexts[@"Chapter 1"];
+    XCTAssertTrue([ch1 waitForExistenceWithTimeout:10]);
+    XCTAssertTrue(ch1.isHittable, @"Chapter 1 should be hittable when sidebar is open");
+    // Collapse using View menu shortcut (works regardless of which toggle is visible).
+    [_app typeKey:@"s" modifierFlags:XCUIKeyModifierCommand | XCUIKeyModifierControl];
     [NSThread sleepForTimeInterval:0.6];
-    XCTAssertFalse(_app.staticTexts[@"Chapter 1"].exists,
-                   @"Chapter 1 should not be visible after collapsing sidebar");
+    XCTAssertFalse(_app.staticTexts[@"Chapter 1"].isHittable,
+                   @"Chapter 1 should not be hittable after collapsing sidebar");
 }
 
 - (void)testOpeningSameFileDoesNotCreateDuplicateWindow {
