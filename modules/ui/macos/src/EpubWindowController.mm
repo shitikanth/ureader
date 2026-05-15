@@ -5,7 +5,7 @@
 #include "StateStore.h"
 #include "EpubParser.h"
 
-@interface EpubWindowController () <NSToolbarDelegate>
+@interface EpubWindowController () <NSToolbarDelegate, WKNavigationDelegate>
 @end
 
 @implementation EpubWindowController {
@@ -55,6 +55,7 @@
     [config.userContentController addScriptMessageHandler:bridge name:@"bridge"];
 
     _webView = [[WKWebView alloc] initWithFrame:NSZeroRect configuration:config];
+    _webView.navigationDelegate = self;
 
     NSString* shellPath = [[NSBundle mainBundle] pathForResource:@"shell" ofType:@"html"];
     if (!shellPath) { NSLog(@"ureader: shell.html not found in bundle"); return nil; }
@@ -350,6 +351,21 @@ willBeInsertedIntoToolbar:(BOOL)flag {
     NSString* json = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
     [_webView evaluateJavaScript:[NSString stringWithFormat:@"%@(%@)", fn, json]
                completionHandler:nil];
+}
+
+// MARK: - WKNavigationDelegate
+
+- (void)webView:(WKWebView*)webView
+    decidePolicyForNavigationAction:(WKNavigationAction*)navigationAction
+                    decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
+    NSURL* url = navigationAction.request.URL;
+    NSString* scheme = url.scheme.lowercaseString;
+    if ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"]) {
+        [[NSWorkspace sharedWorkspace] openURL:url];
+        decisionHandler(WKNavigationActionPolicyCancel);
+        return;
+    }
+    decisionHandler(WKNavigationActionPolicyAllow);
 }
 
 - (void)windowWillClose:(NSNotification*)notification {

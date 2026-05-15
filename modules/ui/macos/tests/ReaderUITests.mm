@@ -136,6 +136,19 @@
     [self assertPositionIs:@"2 / 2"];
 }
 
+- (void)testExternalLinkOpensInBrowser {
+    XCUIElement *wv = [self waitForWebView];
+    // The link must be visible; wait up to 10 s for the chapter to load.
+    XCUIElement *link = wv.links[@"External Link"];
+    XCTAssertTrue([link waitForExistenceWithTimeout:10],
+                  @"External Link should be present in chapter 1 content");
+    [link click];
+    // After clicking an external link the epub content must remain visible —
+    // the webview must not have navigated the iframe (or the app) away.
+    XCTAssertTrue([wv.staticTexts[@"Chapter 1"] waitForExistenceWithTimeout:5],
+                  @"Epub content should remain after clicking external link");
+}
+
 - (void)testPositionPersistsAfterRelaunch {
     [self waitForWebView];
     [self assertPositionIs:@"1 / 2"];

@@ -72,6 +72,7 @@ cat > "$TMP/OEBPS/chapter1.xhtml" << 'EOF'
 <body>
   <h1 id="chapter-1">Chapter 1</h1>
   <p>Hello from chapter one.</p>
+  <p><a href="https://example.com">External Link</a></p>
   <h2 id="section-1-1">Section 1.1</h2>
   <p>Content of section 1.1.</p>
   <h2 id="section-1-2">Section 1.2</h2>
