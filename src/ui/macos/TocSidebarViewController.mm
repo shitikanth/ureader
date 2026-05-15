@@ -21,17 +21,12 @@ static NSString* const kCellID = @"TocCell";
 }
 
 - (void)loadView {
-    NSVisualEffectView* sidebar = [[NSVisualEffectView alloc] init];
-    sidebar.material = NSVisualEffectMaterialSidebar;
-    sidebar.blendingMode = NSVisualEffectBlendingModeWithinWindow;
-    sidebar.state = NSVisualEffectStateFollowsWindowActiveState;
-
     NSScrollView* scroll = [[NSScrollView alloc] init];
     scroll.hasVerticalScroller = YES;
     scroll.autohidesScrollers = YES;
     scroll.borderType = NSNoBorder;
     scroll.drawsBackground = NO;
-    scroll.translatesAutoresizingMaskIntoConstraints = NO;
+    scroll.automaticallyAdjustsContentInsets = YES;
 
     _tableView = [[NSTableView alloc] init];
     _tableView.style = NSTableViewStyleSourceList;
@@ -46,17 +41,8 @@ static NSString* const kCellID = @"TocCell";
     col.resizingMask = NSTableColumnAutoresizingMask;
     [_tableView addTableColumn:col];
     [_tableView sizeLastColumnToFit];
-
     scroll.documentView = _tableView;
-    [sidebar addSubview:scroll];
-    [NSLayoutConstraint activateConstraints:@[
-        [scroll.topAnchor constraintEqualToAnchor:sidebar.topAnchor],
-        [scroll.bottomAnchor constraintEqualToAnchor:sidebar.bottomAnchor],
-        [scroll.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor],
-        [scroll.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor],
-    ]];
-
-    self.view = sidebar;
+    self.view = scroll;
 }
 
 // MARK: - NSTableViewDataSource
