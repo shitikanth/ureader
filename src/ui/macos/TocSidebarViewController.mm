@@ -36,6 +36,7 @@ static NSString* const kCellID = @"TocCell";
     _tableView.backgroundColor = NSColor.clearColor;
     _tableView.dataSource = self;
     _tableView.delegate = self;
+    _tableView.accessibilityIdentifier = @"TocTable";
 
     NSTableColumn* col = [[NSTableColumn alloc] initWithIdentifier:@"title"];
     col.resizingMask = NSTableColumnAutoresizingMask;

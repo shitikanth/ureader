@@ -59,6 +59,18 @@
     [toggle click];
 }
 
+- (XCUIElement *)sidebarTable {
+    // NSTableView with NSTableViewStyleSourceList may surface as either an
+    // outline or table in XCUI depending on macOS version. Try both.
+    XCUIElement *byOutline = _app.outlines[@"TocTable"];
+    if (byOutline.exists) return byOutline;
+    return _app.tables[@"TocTable"];
+}
+
+- (XCUIElement *)sidebarEntry:(NSString *)title {
+    return [self sidebarTable].staticTexts[title];
+}
+
 - (void)testWindowTitleIsBookTitle {
     // Window title still set (visible in Dock / Cmd-Tab) even though hidden from titlebar.
     XCTAssertTrue([_app.windows[@"Test Book"] waitForExistenceWithTimeout:10]);
@@ -71,13 +83,8 @@
 - (void)testTOCItemsAreVisibleInSidebar {
     [self waitForWebView];
     [self openSidebar];
-    // "Chapter 1" appears both in the sidebar AND as an <h1> in the webview,
-    // so the simple query is ambiguous. Section 1.1/1.2 only appear in the
-    // sidebar (they're subsection anchors), so we use one as a sidebar marker.
-    XCTAssertTrue([_app.staticTexts[@"Section 1.1"] waitForExistenceWithTimeout:10],
-                  @"Section 1.1 should be present in the sidebar TOC");
-    XCTAssertTrue(_app.staticTexts[@"Section 1.2"].exists,
-                  @"Section 1.2 should be present in the sidebar TOC");
+    XCTAssertTrue([[self sidebarEntry:@"Chapter 1"] waitForExistenceWithTimeout:10]);
+    XCTAssertTrue([self sidebarEntry:@"Chapter 2"].exists);
 }
 
 - (void)testInitialPositionIsFirstChapter {
@@ -103,7 +110,7 @@
 - (void)testClickingTOCEntryNavigatesToThatChapter {
     [self waitForWebView];
     [self openSidebar];
-    XCUIElement *chapter2 = _app.staticTexts[@"Chapter 2"];
+    XCUIElement *chapter2 = [self sidebarEntry:@"Chapter 2"];
     XCTAssertTrue([chapter2 waitForExistenceWithTimeout:10]);
     [chapter2 click];
     XCTAssertTrue([[self positionLabelAt:@"2 / 2"] waitForExistenceWithTimeout:10]);
@@ -111,13 +118,11 @@
 
 - (void)testSidebarRevealsTOCEntries {
     [self waitForWebView];
-    // Section 1.1 only exists in the sidebar (not in webview content), so its
-    // appearance signals the sidebar successfully opened.
-    XCTAssertFalse(_app.staticTexts[@"Section 1.1"].exists,
-                   @"Section 1.1 shouldn't be visible before opening sidebar");
+    XCTAssertFalse([self sidebarTable].exists,
+                   @"Sidebar table shouldn't be queryable when sidebar is collapsed");
     [self openSidebar];
-    XCTAssertTrue([_app.staticTexts[@"Section 1.1"] waitForExistenceWithTimeout:10],
-                  @"Section 1.1 should appear after opening sidebar");
+    XCTAssertTrue([[self sidebarTable] waitForExistenceWithTimeout:10],
+                  @"Sidebar table should appear after opening sidebar");
 }
 
 - (void)testOpeningSameFileDoesNotCreateDuplicateWindow {
