@@ -10,8 +10,11 @@ add_executable(ureader MACOSX_BUNDLE
   BridgeMessageHandler.mm
   TocSidebarViewController.mm
   ${PROJECT_SOURCE_DIR}/resources/shell.html
+  ${PROJECT_SOURCE_DIR}/resources/icon/AppIcon.icns
 )
 set_source_files_properties(${PROJECT_SOURCE_DIR}/resources/shell.html
+  PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+set_source_files_properties(${PROJECT_SOURCE_DIR}/resources/icon/AppIcon.icns
   PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 
 target_include_directories(ureader PRIVATE
